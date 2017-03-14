@@ -1,0 +1,5 @@
+# NPM ignore
+*
+*/
+!/package.json
+!/dist
