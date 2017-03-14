@@ -8,9 +8,11 @@
   "devDependencies": {
     "babel-preset-es2015": "^6.24.0",
     "rollup": "^0.41.5",
-    "rollup-plugin-babel": "^2.7.1"
+    "rollup-plugin-babel": "^2.7.1",
+    "uglify-js": "^2.8.12"
   },
   "scripts": {
-    "build-js": "rollup -c --format umd --output dist/vue-input-validator.js"
+    "build-js": "rollup -c --format umd --output dist/vue-input-validator.js",
+    "build-js-min": "npm run build-js && uglifyjs --compress --mangle --output dist/vue-input-validator.min.js -- dist/vue-input-validator.js"
   }
 }
