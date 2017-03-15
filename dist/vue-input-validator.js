@@ -57,7 +57,7 @@ var Rules = function () {
 			return new options.Promise(function (resolve) {
 				resolve(Rules._validate(value, rules, options, state));
 			}).then(function (result) {
-				if (result === false || result == null) throw new Error("Invalid value");else if (result === true) return value;
+				if (result === false) throw new Error("Invalid value");else if (result === true || result == null) return value;
 				return result;
 			});
 		}
@@ -73,6 +73,7 @@ var Rules = function () {
 			} else if (typeof rules === 'string') {
 				rules = trimMap(rules.split("|"));
 				if (rules.length > 1) return Rules._validateArray(value, rules, options, state, {}, 0);
+				rules = rules[0];
 
 				var args = trimMap(rules.split(":"));
 				var newRule = $registered[args[0]];
@@ -93,7 +94,7 @@ var Rules = function () {
 		value: function _validateArray(value, rules, options, state, data, offset) {
 			offset = offset | 0;
 			return options.Promise.resolve(Rules._validate(value, rules[offset], options, state, data)).then(function (result) {
-				if (result === false || result == null) throw new Error("Invalid value");else if (result === true) result = value;
+				if (result === false) throw new Error("Invalid value");else if (result === true || result == null) result = value;
 				return Rules._validateArray(result, rules, options, state, data, offset + 1);
 			});
 		}
