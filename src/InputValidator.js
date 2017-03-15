@@ -117,6 +117,12 @@ export default class InputValidator {
 		}
 	}
 	/**
+	 * Remark all the fields as pure
+	 */
+	setPristineAll() {
+		this.$options.vue.set( this, '$states', {} );
+	}
+	/**
 	 * Check for error
 	 */
 	hasError( name ) {
