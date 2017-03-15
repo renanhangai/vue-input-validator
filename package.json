@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build-js": "rollup -c --format umd --output dist/vue-input-validator.js",
-    "build-js-min": "npm run build-js && uglifyjs --compress --mangle --output dist/vue-input-validator.min.js -- dist/vue-input-validator.js"
+    "build-js-min": "npm run build-js && uglifyjs --compress --mangle --output dist/vue-input-validator.min.js -- dist/vue-input-validator.js",
+    "preversion": "npm run build-js-min && git add -f dist"
   },
   "repository": "https://github.com/renanhangai/vue-input-validator.git"
 }
