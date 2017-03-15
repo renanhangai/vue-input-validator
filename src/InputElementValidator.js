@@ -1,10 +1,13 @@
 import Rules from './Rules';
 
 /**
- * Input validators
+
+ Single element input validator
+
  */
 export default class InputElementValidator {
 
+	/// Construct the validator
 	constructor( element, parentValidator ) {
 		this.$element         = element;
 		this.$parentValidator = parentValidator;
@@ -15,40 +18,48 @@ export default class InputElementValidator {
 		this.onInput = this.onInput.bind( this );
 	}
 
+	/// Readonly element
 	get element() { return this.$element; }
-
-
+	/**
+	 * Ubind
+	 */
 	unbind() {
 		if ( this.$unbind != null ) {
 			this.$unbind();
 			this.$unbind = null;
-		}
-			
+		}		
 	}
-
+	/**
+	 * Rebind the element
+	 */
 	bind( binding, vnode ) {
 		if ( vnode.componentInstance ) {
 			if ( this.$boundComponent === vnode.componentInstance )
 				return;
 			this.unbind();
 			this.$boundComponent = vnode.componentInstance;
-			vnode.componentInstance.$on( 'input', this.onInput );
+
+			const comp = vnode.componentInstance;
+			comp.$on( 'input', this.onInput );
 			this.$unbind = () => {
-				vnode.componentInstance.$off( 'input', this.onInput );
+				comp.$off( 'input', this.onInput );
 			};
 		} else {
 			if ( this.$boundComponent === this.$element )
 				return;
 			this.unbind();
 			this.$boundComponent = this.$element;
-			this.$element.addEventListener( 'input', this.onInput );
+
+			const el = this.$element;
+			el.addEventListener( 'input', this.onInput );
 			this.$unbind = () => {
-				this.$element.removeEventListener( 'input', this.onInput );
+				el.removeEventListener( 'input', this.onInput );
 			};
 		}
 	}
-
-
+	/**
+	 * Update the element bindings
+	 */
 	update( binding, vnode ) {
 		this.bind( binding, vnode );
 		
@@ -59,30 +70,49 @@ export default class InputElementValidator {
 			const el = this.$element.$el || this.$element;
 			name = el.getAttribute( 'name' );
 		}
-		
+		if ( this.$name != null )
+			this.$parentValidator.setError( this.$name, null );
 		this.$name       = name;
 		this.$validation = binding.value;
-		this.validate();
+		this.validate().then(noop, noop);
 	}
-
+	/**
+	 * Input event
+	 */
 	onInput() {
-		this.validate();
+		setTimeout( () => {
+			this.validate().then(noop, noop);
+		}, 0);
 	}
-
-	validate( state ) {
-		const value = (this.$boundComponent && this.$boundComponent.value) || this.$element.value;
+	/**
+	 * Validate the field on the state
+	 */
+	validate( state, value ) {
+		state = state || {};
+		if ( value == null )
+			value = (this.$boundComponent && this.$boundComponent.value) || this.$element.value;
 		const name  = this.$name;
+
+		this.$id    = {};
+		const id    = this.$id;
 		this.$parentValidator.setError( name, null );
 		return Rules.validate( value, this.$validation, this.$parentValidator.$options )
 			.then( ( result ) => {
+				if ( id !== this.$id )
+					return;
 				state.data = state.data || {};
 				state.data[ name ] = result;
 			}, ( err ) => {
+				if ( id !== this.$id )
+					return null;
 				this.$parentValidator.setError( name, err );
 				state.errors = state.errors || {};
 				state.errors[ name ] = err;
 				return Promise.reject( err );
-			});
+			})
+		;
 	}
 	
 }
+// Noop
+function noop() {};

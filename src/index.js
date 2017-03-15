@@ -5,6 +5,7 @@ export default {
 	
 	install( vue, options ) {
 		options = {
+			vue: vue,
 			Promise: options.Promise || Promise
 		};
 		vue.directive( 'validate', {
@@ -22,9 +23,18 @@ export default {
 		// Create $inputValidator 
 		vue.mixin({
 			created() {
-				if ( this.$options.validateScope ) {
-					Object.defineProperty( this, '$inputValidator', { value: new InputValidator( this, this.$inputValidator, options ) });
-				}
+				let v = null;
+				if ( !this.$parent ) 
+					v = new InputValidator( this, null, options );
+				else if ( this.$options.validateScope )
+					v = new InputValidator( this, this.$parent.$inputValidator, options );
+				
+				if ( v != null ) {
+					vue.util.defineReactive( this, '$inputValidator', v );
+					v.setup();
+				} else
+					vue.util.defineReactive( this, '$inputValidator', this.$parent.$inputValidator );
+
 			},
 			destroyed() {
 				if ( this.hasOwnProperty( '$inputValidator' ) ) {
@@ -34,7 +44,10 @@ export default {
 			}
 		});
 
+		
+
 		// Input validator
+		/*
 		Object.defineProperty( vue.prototype, '$inputValidator', {
 			configurable: true,
 			get: function() {
@@ -48,6 +61,7 @@ export default {
 				return v;
 			}
 		});
+		 */
 
 	},
 	registerRule( name, rule ) {
