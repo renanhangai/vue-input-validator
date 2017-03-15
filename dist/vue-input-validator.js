@@ -93,6 +93,7 @@ var Rules = function () {
    */
 		value: function _validateArray(value, rules, options, state, data, offset) {
 			offset = offset | 0;
+			if (offset >= rules.length) return value;
 			return options.Promise.resolve(Rules._validate(value, rules[offset], options, state, data)).then(function (result) {
 				if (result === false) throw new Error("Invalid value");else if (result === true || result == null) result = value;
 				return Rules._validateArray(result, rules, options, state, data, offset + 1);

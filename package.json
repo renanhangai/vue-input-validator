@@ -1,6 +1,6 @@
 {
   "name": "vue-input-validator",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Input Validator",
   "main": "dist/vue-input-validator.min.js",
   "author": "renanhangai",
