@@ -406,11 +406,13 @@ var InputValidator = function () {
 		key: '_destroy',
 		value: function _destroy() {
 			this.$childValidators = [];
-			for (var i = 0, len = this.$parentValidator.$childValidators.length; i < len; ++i) {
-				var item = this.$parentValidator.$childValidators[i];
-				if (item === this) {
-					this.$parentValidator.$childValidators.splice(i, 1);
-					break;
+			if (this.$parentValidator) {
+				for (var i = 0, len = this.$parentValidator.$childValidators.length; i < len; ++i) {
+					var item = this.$parentValidator.$childValidators[i];
+					if (item === this) {
+						this.$parentValidator.$childValidators.splice(i, 1);
+						break;
+					}
 				}
 			}
 
@@ -442,7 +444,7 @@ var index = {
 				vnode.context.$inputValidator.bindElement(el, binding, vnode);
 			},
 			unbind: function unbind(el, binding, vnode) {
-				vnode.context.$inputValidator.unbindElement(el);
+				if (vnode.context.$inputValidator) vnode.context.$inputValidator.unbindElement(el);
 			}
 		});
 
