@@ -134,12 +134,14 @@ export default class InputValidator {
 	 */
 	_destroy() {
 		this.$childValidators = [];
-		for ( let i = 0, len = this.$parentValidator.$childValidators.length; i<len; ++i ) {
-			const item = this.$parentValidator.$childValidators[ i ];
-			if ( item === this ) {
-				this.$parentValidator.$childValidators.splice( i, 1 );
-				break;
-			}	
+		if ( this.$parentValidator ) {
+			for ( let i = 0, len = this.$parentValidator.$childValidators.length; i<len; ++i ) {
+				const item = this.$parentValidator.$childValidators[ i ];
+				if ( item === this ) {
+					this.$parentValidator.$childValidators.splice( i, 1 );
+					break;
+				}	
+			}
 		}
 
 		for ( let i = 0, len = this._inputElements.length; i<len; ++i ) {
