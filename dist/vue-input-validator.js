@@ -384,6 +384,15 @@ var InputValidator = function () {
 			}
 		}
 		/**
+   * Remark all the fields as pure
+   */
+
+	}, {
+		key: 'setPristineAll',
+		value: function setPristineAll() {
+			this.$options.vue.set(this, '$states', {});
+		}
+		/**
    * Check for error
    */
 
