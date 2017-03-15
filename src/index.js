@@ -16,7 +16,8 @@ export default {
 				vnode.context.$inputValidator.bindElement( el, binding, vnode );
 			},
 			unbind( el, binding, vnode ) {
-				vnode.context.$inputValidator.unbindElement( el );
+				if ( vnode.context.$inputValidator )
+					vnode.context.$inputValidator.unbindElement( el );
 			}
 		});
 
