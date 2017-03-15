@@ -43,3 +43,28 @@ export default {
 	}
 };
 ```
+
+
+Rules
+------------------------
+
+Register a new validation rule
+
+```js
+/*
+	If the rule returns false or throw, it is an error
+	If the rule returns true | null | undefined. It is kept
+	If the rule return anything else, it is kept on the chain and the 
+	next rule will be called with that value
+*/
+// Register a number rule
+VueInputValidator.registerRule( 'number', function( v ) {
+    return parseInt(v, 10) == v;
+});
+// Lower
+VueInputValidator.registerRule( 'lower', function( v ) {
+    return v.toLowerCase();
+});
+
+```
+
