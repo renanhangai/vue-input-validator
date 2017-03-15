@@ -43,26 +43,6 @@ export default {
 				}
 			}
 		});
-
-		
-
-		// Input validator
-		/*
-		Object.defineProperty( vue.prototype, '$inputValidator', {
-			configurable: true,
-			get: function() {
-				if ( this.$parent )
-					return this.$parent.$inputValidator;
-
-				const v = new InputValidator( this, null, options );
-				Object.defineProperty( this, '$inputValidator', {
-					value: v
-				});
-				return v;
-			}
-		});
-		 */
-
 	},
 	registerRule( name, rule ) {
 		Rules.register( name, rule );
