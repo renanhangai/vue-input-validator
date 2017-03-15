@@ -52,6 +52,8 @@ export default class Rules {
 	 */
 	static _validateArray( value, rules, options, state, data, offset ) {
 		offset = offset | 0;
+		if ( offset >= rules.length )
+			return value;
 		return options.Promise.resolve( Rules._validate( value, rules[offset], options, state, data ) )
 			.then(( result ) => {
 				if ( result === false )
