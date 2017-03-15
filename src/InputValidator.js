@@ -30,7 +30,7 @@ export default class InputValidator {
 	 * Setup elements after defining reactive
 	 */
 	setup() {
-		this.$options.vue.util.defineReactive( this, '$errors', {} );
+		this.$options.vue.util.defineReactive( this, '$states', {} );
 	}
 
 	/**
@@ -68,11 +68,11 @@ export default class InputValidator {
 	 * Validate all the elements on the input
 	 */
 	validateAll( validateChildren, state ) {
-		this.$options.vue.set( this, '$errors', {} );
+		this.$options.vue.set( this, '$states', {} );
 		state = state || {};
 		const inputValidation = [];
 		for ( let i = 0, len = this._inputElements.length; i<len; ++i )
-			inputValidation.push( this._inputElements[ i ].validate( state ).then( noop, noop ) );
+			inputValidation.push( this._inputElements[ i ].validate( state, true ).then( noop, noop ) );
 		
 		return this.$options.Promise.all( inputValidation )
 			.then(() => {
@@ -97,15 +97,33 @@ export default class InputValidator {
 	/**
 	 * Set the error for the validate
 	 */
-	setError( name, error ) {
-		this.$options.vue.set( this.$errors, name, error );
+	setState( name, state ) {
+		const old = this.$states[ name ];
+		this.$options.vue.set( this.$states, name, {
+			dirty:  (old && old.dirty) || state.dirty,
+			errors: state.errors
+		});
+	}
+	/**
+	 * Remark the field as pure
+	 */
+	setPristine( name ) {
+		const old = this.$states[ name ];
+		if ( old && old.dirty ) {
+			this.$options.vue.set( this.$states, name, {
+				dirty:  false,
+				errors: old.errors
+			});
+		}
 	}
 	/**
 	 * Check for error
 	 */
 	hasError( name ) {
-		if ( this.$errors[ name ] != null )
-			return true;
+		const state = this.$states[ name ];
+		if ( state != null ) {
+			return ( state.dirty && state.errors );
+		}
 		for ( let i = 0, len = this.$childValidators.length; i<len; ++i )
 			if ( this.$childValidators[ i ].hasError( name ) )
 				return true;

@@ -71,7 +71,7 @@ export default class InputElementValidator {
 			name = el.getAttribute( 'name' );
 		}
 		if ( this.$name != null )
-			this.$parentValidator.setError( this.$name, null );
+			this.$parentValidator.setState( this.$name, null );
 		this.$name       = name;
 		this.$validation = binding.value;
 		this.validate().then(noop, noop);
@@ -81,21 +81,22 @@ export default class InputElementValidator {
 	 */
 	onInput() {
 		setTimeout( () => {
-			this.validate().then(noop, noop);
+			this.validate( null, 'input' ).then(noop, noop);
 		}, 0);
 	}
 	/**
 	 * Validate the field on the state
 	 */
-	validate( state, value ) {
+	validate( state, dirty ) {
 		state = state || {};
-		if ( value == null )
-			value = (this.$boundComponent && this.$boundComponent.value) || this.$element.value;
+		const value = (this.$boundComponent && this.$boundComponent.value) || this.$element.value;
 		const name  = this.$name;
 
 		this.$id    = {};
 		const id    = this.$id;
-		this.$parentValidator.setError( name, null );
+		this.$parentValidator.setState( name, {
+			dirty: (dirty === 'input') ? (!!value) : (!!dirty)
+		} );
 		return Rules.validate( value, this.$validation, this.$parentValidator.$options )
 			.then( ( result ) => {
 				if ( id !== this.$id )
@@ -105,7 +106,7 @@ export default class InputElementValidator {
 			}, ( err ) => {
 				if ( id !== this.$id )
 					return null;
-				this.$parentValidator.setError( name, err );
+				this.$parentValidator.setState( name, { errors: err } );
 				state.errors = state.errors || {};
 				state.errors[ name ] = err;
 				return Promise.reject( err );
