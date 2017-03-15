@@ -46,6 +46,10 @@ var Rules = function () {
 		}
 	}, {
 		key: "validate",
+
+		/**
+   *
+   */
 		value: function validate(value, rules, options) {
 			var state = {
 				initial: value
@@ -59,35 +63,51 @@ var Rules = function () {
 		}
 	}, {
 		key: "_validate",
-		value: function _validate(value, rules, options, state) {
-			if (Array.isArray(rules)) {
-				return Rules._validateArray(value, rules, options, state, 0);
-			} else if (typeof rules === 'string') {
-				rules = rules.split("|");
-				for (var i = 0, len = rules.length; i < len; ++i) {
-					rules[i] = rules[i].trim();
-				}if (rules.length > 1) return Rules._validateArray(value, rules, options, state, 0);
 
-				var newRule = $registered[rules];
+		/**
+   *
+   */
+		value: function _validate(value, rules, options, state, data) {
+			if (Array.isArray(rules)) {
+				return Rules._validateArray(value, rules, options, state, {}, 0);
+			} else if (typeof rules === 'string') {
+				rules = trimMap(rules.split("|"));
+				if (rules.length > 1) return Rules._validateArray(value, rules, options, state, {}, 0);
+
+				var args = trimMap(rules.split(":"));
+				var newRule = $registered[args[0]];
 				if (newRule == null) throw new Error("Invalid rule \"" + rules + "\"");
-				return Rules._validate(value, newRule, options, state);
+				return Rules._validate(value, newRule, options, state, { args: args.slice(1) });
 			} else if (typeof rules === 'function') {
-				return rules.call(null, value, state);
+				var _args = [value].concat(data && data.args || []);
+				return rules.apply(null, _args);
 			}
 			throw new Error("Invalid rule");
 		}
 	}, {
 		key: "_validateArray",
-		value: function _validateArray(value, rules, options, state, offset) {
+
+		/**
+   * Validate an array of objects
+   */
+		value: function _validateArray(value, rules, options, state, data, offset) {
 			offset = offset | 0;
-			return options.Promise.resolve(Rules._validate(value, rules[offset], options, state)).then(function (result) {
+			return options.Promise.resolve(Rules._validate(value, rules[offset], options, state, data)).then(function (result) {
 				if (result === false || result == null) throw new Error("Invalid value");else if (result === true) result = value;
-				return Rules._validateArray(result, rules, options, state, offset + 1);
+				return Rules._validateArray(result, rules, options, state, data, offset + 1);
 			});
 		}
 	}]);
 	return Rules;
 }();
+
+
+
+function trimMap(map) {
+	for (var i = 0, len = map.length; i < len; ++i) {
+		map[i] = map[i].trim();
+	}return map;
+}
 
 /**
 
