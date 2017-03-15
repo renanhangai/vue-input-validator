@@ -170,7 +170,7 @@ var InputElementValidator = function () {
 				var el = this.$element.$el || this.$element;
 				name = el.getAttribute('name');
 			}
-			if (this.$name != null) this.$parentValidator.setError(this.$name, null);
+			if (this.$name != null) this.$parentValidator.setState(this.$name, null);
 			this.$name = name;
 			this.$validation = binding.value;
 			this.validate().then(noop$1, noop$1);
@@ -185,7 +185,7 @@ var InputElementValidator = function () {
 			var _this2 = this;
 
 			setTimeout(function () {
-				_this2.validate().then(noop$1, noop$1);
+				_this2.validate(null, 'input').then(noop$1, noop$1);
 			}, 0);
 		}
 		/**
@@ -194,23 +194,25 @@ var InputElementValidator = function () {
 
 	}, {
 		key: 'validate',
-		value: function validate(state, value) {
+		value: function validate(state, dirty) {
 			var _this3 = this;
 
 			state = state || {};
-			if (value == null) value = this.$boundComponent && this.$boundComponent.value || this.$element.value;
+			var value = this.$boundComponent && this.$boundComponent.value || this.$element.value;
 			var name = this.$name;
 
 			this.$id = {};
 			var id = this.$id;
-			this.$parentValidator.setError(name, null);
+			this.$parentValidator.setState(name, {
+				dirty: dirty === 'input' ? !!value : !!dirty
+			});
 			return Rules.validate(value, this.$validation, this.$parentValidator.$options).then(function (result) {
 				if (id !== _this3.$id) return;
 				state.data = state.data || {};
 				state.data[name] = result;
 			}, function (err) {
 				if (id !== _this3.$id) return null;
-				_this3.$parentValidator.setError(name, err);
+				_this3.$parentValidator.setState(name, { errors: err });
 				state.errors = state.errors || {};
 				state.errors[name] = err;
 				return Promise.reject(err);
@@ -263,7 +265,7 @@ var InputValidator = function () {
 	createClass(InputValidator, [{
 		key: 'setup',
 		value: function setup() {
-			this.$options.vue.util.defineReactive(this, '$errors', {});
+			this.$options.vue.util.defineReactive(this, '$states', {});
 		}
 
 		/**
@@ -309,11 +311,11 @@ var InputValidator = function () {
 		value: function validateAll(validateChildren, state) {
 			var _this = this;
 
-			this.$options.vue.set(this, '$errors', {});
+			this.$options.vue.set(this, '$states', {});
 			state = state || {};
 			var inputValidation = [];
 			for (var i = 0, len = this._inputElements.length; i < len; ++i) {
-				inputValidation.push(this._inputElements[i].validate(state).then(noop, noop));
+				inputValidation.push(this._inputElements[i].validate(state, true).then(noop, noop));
 			}return this.$options.Promise.all(inputValidation).then(function () {
 				if (validateChildren === false) return null;
 
@@ -336,9 +338,28 @@ var InputValidator = function () {
    */
 
 	}, {
-		key: 'setError',
-		value: function setError(name, error) {
-			this.$options.vue.set(this.$errors, name, error);
+		key: 'setState',
+		value: function setState(name, state) {
+			var old = this.$states[name];
+			this.$options.vue.set(this.$states, name, {
+				dirty: old && old.dirty || state.dirty,
+				errors: state.errors
+			});
+		}
+		/**
+   * Remark the field as pure
+   */
+
+	}, {
+		key: 'setPristine',
+		value: function setPristine(name) {
+			var old = this.$states[name];
+			if (old && old.dirty) {
+				this.$options.vue.set(this.$states, name, {
+					dirty: false,
+					errors: old.errors
+				});
+			}
 		}
 		/**
    * Check for error
@@ -347,7 +368,10 @@ var InputValidator = function () {
 	}, {
 		key: 'hasError',
 		value: function hasError(name) {
-			if (this.$errors[name] != null) return true;
+			var state = this.$states[name];
+			if (state != null) {
+				return state.dirty && state.errors;
+			}
 			for (var i = 0, len = this.$childValidators.length; i < len; ++i) {
 				if (this.$childValidators[i].hasError(name)) return true;
 			}return false;
