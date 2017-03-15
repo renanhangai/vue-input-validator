@@ -17,9 +17,9 @@ export default class Rules {
 		return new options.Promise(function( resolve ) {
 			resolve( Rules._validate( value, rules, options, state ) );
 		}).then(function( result ) {
-			if ( ( result === false ) || ( result == null ) )
+			if ( result === false )
 				throw new Error( "Invalid value" );
-			else if ( result === true )
+			else if ( ( result === true ) || ( result == null ) )
 				return value;
 			return result;
 		});
@@ -34,7 +34,8 @@ export default class Rules {
 			rules = trimMap( rules.split( "|" ) );
 			if ( rules.length > 1 )
 				return Rules._validateArray( value, rules, options, state, {}, 0 );
-
+			rules = rules[0];
+			
 			const args = trimMap( rules.split(":") );
 			const newRule = $registered[ args[0] ];
 			if ( newRule == null )
@@ -53,9 +54,9 @@ export default class Rules {
 		offset = offset | 0;
 		return options.Promise.resolve( Rules._validate( value, rules[offset], options, state, data ) )
 			.then(( result ) => {
-				if ( ( result === false ) || ( result == null ) )
+				if ( result === false )
 					throw new Error( "Invalid value" );
-				else if ( result === true )
+				else if ( ( result === true ) || ( result == null ) )
 					result = value;
 				return Rules._validateArray( result, rules, options, state, data, offset+1 );
 			})
