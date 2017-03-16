@@ -101,7 +101,8 @@ export default class InputValidator {
 		const old = this.$states[ name ];
 		this.$options.vue.set( this.$states, name, {
 			dirty:  (old && old.dirty) || state.dirty,
-			errors: state.errors
+			errors: state.errors,
+			errorsTimestamp: state.errors ? Date.now() : null
 		});
 	}
 	/**
@@ -125,15 +126,33 @@ export default class InputValidator {
 	/**
 	 * Check for error
 	 */
-	hasError( name ) {
+	hasError( name, debounce ) {
+		const state = this.getState( name );
+		if ( state == null )
+			return false;
+		const hasError = ( state.dirty && state.errors );
+		if ( !hasError )
+			return false;
+		
+		if ( debounce == null || !state.errorsTimestamp )
+			return true;
+		
+		debounce = debounce|0;
+		return Date.now() >= (state.errorsTimestamp+debounce);
+	}
+	/**
+	 * Get a state
+	 */
+	getState( name ) {
 		const state = this.$states[ name ];
-		if ( state != null ) {
-			return ( state.dirty && state.errors );
+		if ( state != null )
+			return state;
+		for ( let i = 0, len = this.$childValidators.length; i<len; ++i ) {
+			const childState = this.$childValidators[ i ].getState( name );
+			if ( childState != null )
+				return childState;
 		}
-		for ( let i = 0, len = this.$childValidators.length; i<len; ++i )
-			if ( this.$childValidators[ i ].hasError( name ) )
-				return true;
-		return false;
+		return null;
 	}
 	/**
 	 * Destroy the validator
