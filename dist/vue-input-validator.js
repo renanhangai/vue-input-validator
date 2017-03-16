@@ -475,13 +475,8 @@ var index = {
 			}
 		});
 
-		// Create $inputValidator and $error 
+		// Create $inputValidator
 		vue.mixin({
-			methods: {
-				$error: function $error(name, debounce) {
-					return this.$inputValidator.hasError(name, debounce);
-				}
-			},
 			created: function created() {
 				var v = null;
 				if (!this.$parent) v = new InputValidator(this, null, options);else if (this.$options.validateScope) v = new InputValidator(this, this.$parent.$inputValidator, options);
@@ -498,6 +493,11 @@ var index = {
 				}
 			}
 		});
+
+		// $error shortcut
+		vue.prototype.$error = function (name, debounce) {
+			return this.$inputValidator.hasError(name, debounce);
+		};
 	},
 	registerRule: function registerRule(name, rule) {
 		Rules.register(name, rule);
