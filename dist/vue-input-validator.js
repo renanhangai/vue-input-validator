@@ -475,8 +475,13 @@ var index = {
 			}
 		});
 
-		// Create $inputValidator 
+		// Create $inputValidator and $error 
 		vue.mixin({
+			methods: {
+				$error: function $error(name, debounce) {
+					return this.$inputValidator.hasError(name, debounce);
+				}
+			},
 			created: function created() {
 				var v = null;
 				if (!this.$parent) v = new InputValidator(this, null, options);else if (this.$options.validateScope) v = new InputValidator(this, this.$parent.$inputValidator, options);
