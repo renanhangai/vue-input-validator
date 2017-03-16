@@ -365,7 +365,8 @@ var InputValidator = function () {
 			var old = this.$states[name];
 			this.$options.vue.set(this.$states, name, {
 				dirty: old && old.dirty || state.dirty,
-				errors: state.errors
+				errors: state.errors,
+				errorsTimestamp: state.errors ? Date.now() : null
 			});
 		}
 		/**
@@ -398,14 +399,31 @@ var InputValidator = function () {
 
 	}, {
 		key: 'hasError',
-		value: function hasError(name) {
+		value: function hasError(name, debounce) {
+			var state = this.getState(name);
+			if (state == null) return false;
+			var hasError = state.dirty && state.errors;
+			if (!hasError) return false;
+
+			if (debounce == null || !state.errorsTimestamp) return true;
+
+			debounce = debounce | 0;
+			return Date.now() >= state.errorsTimestamp + debounce;
+		}
+		/**
+   * Get a state
+   */
+
+	}, {
+		key: 'getState',
+		value: function getState(name) {
 			var state = this.$states[name];
-			if (state != null) {
-				return state.dirty && state.errors;
-			}
+			if (state != null) return state;
 			for (var i = 0, len = this.$childValidators.length; i < len; ++i) {
-				if (this.$childValidators[i].hasError(name)) return true;
-			}return false;
+				var childState = this.$childValidators[i].getState(name);
+				if (childState != null) return childState;
+			}
+			return null;
 		}
 		/**
    * Destroy the validator
