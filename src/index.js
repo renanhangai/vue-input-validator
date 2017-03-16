@@ -21,8 +21,13 @@ export default {
 			}
 		});
 
-		// Create $inputValidator 
+		// Create $inputValidator and $error 
 		vue.mixin({
+			methods: {
+				$error( name, debounce ) {
+					return this.$inputValidator.hasError( name, debounce );
+				}
+			},
 			created() {
 				let v = null;
 				if ( !this.$parent ) 
