@@ -21,13 +21,8 @@ export default {
 			}
 		});
 
-		// Create $inputValidator and $error 
+		// Create $inputValidator
 		vue.mixin({
-			methods: {
-				$error( name, debounce ) {
-					return this.$inputValidator.hasError( name, debounce );
-				}
-			},
 			created() {
 				let v = null;
 				if ( !this.$parent ) 
@@ -49,6 +44,11 @@ export default {
 				}
 			}
 		});
+
+		// $error shortcut
+		vue.prototype.$error = function( name, debounce ) {
+			return this.$inputValidator.hasError( name, debounce );
+		};
 	},
 	registerRule( name, rule ) {
 		Rules.register( name, rule );
