@@ -35,7 +35,7 @@ export default class InputElementValidator {
 	bind( binding, vnode ) {
 		if ( vnode.componentInstance ) {
 			if ( this.$boundComponent === vnode.componentInstance )
-				return;
+				return false;
 			this.unbind();
 			this.$boundComponent = vnode.componentInstance;
 
@@ -46,7 +46,7 @@ export default class InputElementValidator {
 			};
 		} else {
 			if ( this.$boundComponent === this.$element )
-				return;
+				return false;
 			this.unbind();
 			this.$boundComponent = this.$element;
 
@@ -56,12 +56,14 @@ export default class InputElementValidator {
 				el.removeEventListener( 'input', this.onInput );
 			};
 		}
+		return true;
 	}
 	/**
 	 * Update the element bindings
 	 */
 	update( binding, vnode ) {
-		this.bind( binding, vnode );
+		if ( !this.bind( binding, vnode ) )
+			return;
 		
 		let name = null;
 		if ( vnode.componentInstance )

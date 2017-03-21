@@ -98,6 +98,10 @@ export default class InputValidator {
 	 * Set the error for the validate
 	 */
 	setState( name, state ) {
+		if ( !state ) {
+			this.$options.vue.set( this.$states, name, null );
+			return;
+		}
 		const old = this.$states[ name ];
 		this.$options.vue.set( this.$states, name, {
 			dirty:  (old && old.dirty) || state.dirty,

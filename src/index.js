@@ -12,7 +12,7 @@ export default {
 			bind( el, binding, vnode ) {
 				vnode.context.$inputValidator.bindElement( el, binding, vnode );
 			},
-			updated( el, binding, vnode ) {
+			update( el, binding, vnode ) {
 				vnode.context.$inputValidator.bindElement( el, binding, vnode );
 			},
 			unbind( el, binding, vnode ) {
