@@ -82,7 +82,7 @@ export default class InputValidator {
 				const childValidation = [];
 				for ( let i = 0, len = this.$childValidators.length; i<len; ++i )
 					childValidation.push( this.$childValidators[ i ].validateAll( true, state ).then( noop, noop ) );
-				return Promise.all( childValidation );
+				return this.$options.Promise.all( childValidation );
 			}).then(function() {
 				if ( state.errors ) {
 					const err  = new Error;

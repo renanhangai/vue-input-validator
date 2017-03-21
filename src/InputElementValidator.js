@@ -109,7 +109,7 @@ export default class InputElementValidator {
 				this.$parentValidator.setState( name, { errors: err } );
 				state.errors = state.errors || {};
 				state.errors[ name ] = err;
-				return Promise.reject( err );
+				throw err;
 			})
 		;
 	}
