@@ -237,7 +237,7 @@ var InputElementValidator = function () {
 				_this3.$parentValidator.setState(name, { errors: err });
 				state.errors = state.errors || {};
 				state.errors[name] = err;
-				return Promise.reject(err);
+				throw err;
 			});
 		}
 	}, {
@@ -344,7 +344,7 @@ var InputValidator = function () {
 				var childValidation = [];
 				for (var _i = 0, _len = _this.$childValidators.length; _i < _len; ++_i) {
 					childValidation.push(_this.$childValidators[_i].validateAll(true, state).then(noop, noop));
-				}return Promise.all(childValidation);
+				}return _this.$options.Promise.all(childValidation);
 			}).then(function () {
 				if (state.errors) {
 					var err = new Error();
