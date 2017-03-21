@@ -156,7 +156,7 @@ var InputElementValidator = function () {
 			var _this = this;
 
 			if (vnode.componentInstance) {
-				if (this.$boundComponent === vnode.componentInstance) return;
+				if (this.$boundComponent === vnode.componentInstance) return false;
 				this.unbind();
 				this.$boundComponent = vnode.componentInstance;
 
@@ -166,7 +166,7 @@ var InputElementValidator = function () {
 					comp.$off('input', _this.onInput);
 				};
 			} else {
-				if (this.$boundComponent === this.$element) return;
+				if (this.$boundComponent === this.$element) return false;
 				this.unbind();
 				this.$boundComponent = this.$element;
 
@@ -176,6 +176,7 @@ var InputElementValidator = function () {
 					el.removeEventListener('input', _this.onInput);
 				};
 			}
+			return true;
 		}
 		/**
    * Update the element bindings
@@ -184,7 +185,7 @@ var InputElementValidator = function () {
 	}, {
 		key: 'update',
 		value: function update(binding, vnode) {
-			this.bind(binding, vnode);
+			if (!this.bind(binding, vnode)) return;
 
 			var name = null;
 			if (vnode.componentInstance) name = vnode.componentInstance.name;
@@ -362,6 +363,10 @@ var InputValidator = function () {
 	}, {
 		key: 'setState',
 		value: function setState(name, state) {
+			if (!state) {
+				this.$options.vue.set(this.$states, name, null);
+				return;
+			}
 			var old = this.$states[name];
 			this.$options.vue.set(this.$states, name, {
 				dirty: old && old.dirty || state.dirty,
@@ -467,7 +472,7 @@ var index = {
 			bind: function bind(el, binding, vnode) {
 				vnode.context.$inputValidator.bindElement(el, binding, vnode);
 			},
-			updated: function updated(el, binding, vnode) {
+			update: function update(el, binding, vnode) {
 				vnode.context.$inputValidator.bindElement(el, binding, vnode);
 			},
 			unbind: function unbind(el, binding, vnode) {
