@@ -466,8 +466,7 @@ var index = {
 					});
 					return _validator;
 				}
-
-				return this.$parent.$validator;
+				return this.$parent && this.$parent.$validator;
 			}
 		});
 
