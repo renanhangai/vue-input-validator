@@ -28,484 +28,254 @@ var createClass = function () {
   };
 }();
 
-var $registered = {
-	required: function required(str) {
-		return !!str;
-	}
-};
+var ErrorBag = function () {
+	function ErrorBag(options) {
+		classCallCheck(this, ErrorBag);
 
-var Rules = function () {
-	function Rules() {
-		classCallCheck(this, Rules);
+		this.$setup(options);
 	}
 
-	createClass(Rules, null, [{
-		key: "register",
-		value: function register(name, rule) {
-			$registered[name] = rule;
-		}
-	}, {
-		key: "validate",
-
-		/**
-   *
-   */
-		value: function validate(value, rules, options) {
-			var state = {
-				initial: value
-			};
-			return new options.Promise(function (resolve) {
-				resolve(Rules._validate(value, rules, options, state));
-			}).then(function (result) {
-				if (result === false) throw new Error("Invalid value");else if (result === true || result == null) return value;
-				return result;
+	createClass(ErrorBag, [{
+		key: '$setup',
+		value: function $setup(options) {
+			var $internal = Object.freeze({
+				options: options || {},
+				errors: {}
+			});
+			Object.defineProperty(this, '$internal', {
+				writable: false,
+				enumerable: false,
+				configurable: false,
+				value: $internal
 			});
 		}
 	}, {
-		key: "_validate",
+		key: '$clear',
+		value: function $clear(name, tag) {
+			var errors = this.$internal.errors[name];
+			if (!errors || errors.length <= 0) return;
 
-		/**
-   *
-   */
-		value: function _validate(value, rules, options, state, data) {
-			if (Array.isArray(rules)) {
-				return Rules._validateArray(value, rules, options, state, {}, 0);
-			} else if (typeof rules === 'string') {
-				rules = trimMap(rules.split("|"));
-				if (rules.length > 1) return Rules._validateArray(value, rules, options, state, {}, 0);
-				rules = rules[0];
-
-				var args = trimMap(rules.split(":"));
-				var newRule = $registered[args[0]];
-				if (newRule == null) throw new Error("Invalid rule \"" + rules + "\"");
-				return Rules._validate(value, newRule, options, state, { args: args.slice(1) });
-			} else if (typeof rules === 'function') {
-				var _args = [value].concat(data && data.args || []);
-				return rules.apply(null, _args);
+			var newErrors = [];
+			if (tag) {
+				for (var i = 0, len = errors.length; i < len; ++i) {
+					var err = errors[i];
+					if (tag !== err.tag) newErrors.push(err);
+				}
 			}
-			throw new Error("Invalid rule");
+			this.$setRaw(name, newErrors);
 		}
 	}, {
-		key: "_validateArray",
-
-		/**
-   * Validate an array of objects
-   */
-		value: function _validateArray(value, rules, options, state, data, offset) {
-			offset = offset | 0;
-			if (offset >= rules.length) return value;
-			return options.Promise.resolve(Rules._validate(value, rules[offset], options, state, data)).then(function (result) {
-				if (result === false) throw new Error("Invalid value");else if (result === true || result == null) result = value;
-				return Rules._validateArray(result, rules, options, state, data, offset + 1);
-			});
+		key: '$update',
+		value: function $update(name) {
+			var errors = this.$internal.errors[name];
+			var errorView = void 0;
+			if (!errors || errors.length <= 0) errorView = false;else {
+				errorView = [];
+				for (var i = 0, len = errors.length; i < len; ++i) {
+					errorView.push(ErrorBag.errorAsString(errors[i]));
+				}
+				errorView.first = errorView[0];
+			}
+			if (this.$internal.options.vue) this.$internal.options.vue.set(this, name, errorView);else this[name] = errorView;
+		}
+	}, {
+		key: '$set',
+		value: function $set(name, error, tag) {
+			var errors = this[name] || [];
+			errors.push({ name: name, error: error, tag: tag });
+			this.$setRaw(name, errors);
+		}
+	}, {
+		key: '$setRaw',
+		value: function $setRaw(name, errors) {
+			if (errors) errors = [].concat(errors);
+			this.$internal.errors[name] = errors;
+			this.$update(name);
+		}
+	}, {
+		key: '$any',
+		value: function $any() {
+			for (var key in this.$internal.errors) {
+				var errors = this.$internal.errors[key];
+				if (errors && errors.length > 0) return true;
+			}
+			return false;
+		}
+	}], [{
+		key: 'errorAsString',
+		value: function errorAsString(error) {
+			if (typeof error === 'string') return error;
+			return "";
 		}
 	}]);
-	return Rules;
+	return ErrorBag;
 }();
 
+var INPUT_TAG = {};
 
+var Validator = function () {
+	/**
+  * Construct
+  */
+	function Validator(parent, options) {
+		classCallCheck(this, Validator);
 
-function trimMap(map) {
-	for (var i = 0, len = map.length; i < len; ++i) {
-		map[i] = map[i].trim();
-	}return map;
-}
-
-/**
-
- Single element input validator
-
- */
-
-var InputElementValidator = function () {
-
-	/// Construct the validator
-	function InputElementValidator(element, parentValidator) {
-		classCallCheck(this, InputElementValidator);
-
-		this.$element = element;
-		this.$parentValidator = parentValidator;
-		this.$validation = null;
-
-		this.$unbind = null;
-		this.onInput = this.onInput.bind(this);
+		options = options || {};
+		this.options = options;
+		this.status = {};
+		this.rules = {};
+		if (options.vue) options.vue.util.defineReactive(this, 'errors', new ErrorBag(options));else this.errors = new ErrorBag(options);
 	}
+	/**
+  * Set a rule for a field on the validator
+  */
 
-	/// Readonly element
 
-
-	createClass(InputElementValidator, [{
-		key: 'unbind',
-
-		/**
-   * Ubind
-   */
-		value: function unbind() {
-			if (this.$unbind != null) {
-				this.$unbind();
-				this.$unbind = null;
-			}
+	createClass(Validator, [{
+		key: 'setRule',
+		value: function setRule(name, rule) {
+			this.rules[name] = {
+				name: name,
+				rule: rule
+			};
 		}
 		/**
-   * Rebind the element
+   * Set the value for a field
    */
 
 	}, {
-		key: 'bind',
-		value: function bind(binding, vnode) {
+		key: 'setValue',
+		value: function setValue(name, value) {
 			var _this = this;
 
-			if (vnode.componentInstance) {
-				if (this.$boundComponent === vnode.componentInstance) return false;
-				this.unbind();
-				this.$boundComponent = vnode.componentInstance;
+			var rule = this.rules[name];
+			if (!rule) return false;
 
-				var comp = vnode.componentInstance;
-				comp.$on('input', this.onInput);
-				this.$unbind = function () {
-					comp.$off('input', _this.onInput);
-				};
+			var status = this.status[name] = this.status[name] || {};
+			this.errors.$clear(name, INPUT_TAG);
+			status.validationID = null;
+
+			var result = rule.rule(value);
+			if (result && result.then) {
+				var id = {};
+				status.validationID = id;
+				status.status = result.then(function (r) {
+					if (status.validationID !== id) return status.status;
+					if (r === false) {
+						_this.errors.$set(name, true, INPUT_TAG);
+						status.status = 'error';
+					} else {
+						_this.errors.$clear(name, INPUT_TAG);
+						status.value = value;
+						status.status = 'success';
+					}
+					return status.status;
+				}, function (err) {
+					if (status.validationID !== id) return status.status;
+					_this.errors.$set(name, err, INPUT_TAG);
+					status.status = 'error';
+					return status.status;
+				});
+				return status.status;
+			} else if (result === false) {
+				this.errors.$set(name, true, INPUT_TAG);
+				status.status = 'error';
+				return status.status;
 			} else {
-				if (this.$boundComponent === this.$element) return false;
-				this.unbind();
-				this.$boundComponent = this.$element;
-
-				var el = this.$element;
-				el.addEventListener('input', this.onInput);
-				this.$unbind = function () {
-					el.removeEventListener('input', _this.onInput);
-				};
+				this.errors.$clear(name, INPUT_TAG);
+				status.value = value;
+				status.status = 'success';
+				return status.status;
 			}
-			return true;
 		}
 		/**
-   * Update the element bindings
-   */
-
-	}, {
-		key: 'update',
-		value: function update(binding, vnode) {
-			if (!this.bind(binding, vnode)) return;
-
-			var name = null;
-			if (vnode.componentInstance) name = vnode.componentInstance.name;
-			if (name == null) {
-				var el = this.$element.$el || this.$element;
-				name = el.getAttribute('name');
-			}
-			if (this.$name != null) this.$parentValidator.setState(this.$name, null);
-			this.$name = name;
-			this.$validation = binding.value;
-			this.validate().then(noop$1, noop$1);
-		}
-		/**
-   * Input event
-   */
-
-	}, {
-		key: 'onInput',
-		value: function onInput() {
-			var _this2 = this;
-
-			setTimeout(function () {
-				_this2.validate(null, 'input').then(noop$1, noop$1);
-			}, 0);
-		}
-		/**
-   * Validate the field on the state
+   * Validate the current validator
    */
 
 	}, {
 		key: 'validate',
-		value: function validate(state, dirty) {
-			var _this3 = this;
+		value: function validate() {
+			var _this2 = this;
 
-			state = state || {};
-			var value = this.$boundComponent && this.$boundComponent.value || this.$element.value;
-			var name = this.$name;
-
-			this.$id = {};
-			var id = this.$id;
-			this.$parentValidator.setState(name, {
-				dirty: dirty === 'input' ? !!value : !!dirty
-			});
-			return Rules.validate(value, this.$validation, this.$parentValidator.$options).then(function (result) {
-				if (id !== _this3.$id) return;
-				state.data = state.data || {};
-				state.data[name] = result;
-			}, function (err) {
-				if (id !== _this3.$id) return null;
-				_this3.$parentValidator.setState(name, { errors: err });
-				state.errors = state.errors || {};
-				state.errors[name] = err;
-				throw err;
-			});
-		}
-	}, {
-		key: 'element',
-		get: function get$$1() {
-			return this.$element;
-		}
-	}]);
-	return InputElementValidator;
-}();
-function noop$1() {}
-
-/**
- 
- InputValidator
-
- This class will bind to a group of inputs and validate then all
-
- */
-
-var InputValidator = function () {
-	/**
-  * Construct this validator
- 	 */
-	function InputValidator(component, parentValidator, options) {
-		classCallCheck(this, InputValidator);
-
-		this.$component = component;
-		this.$parentValidator = parentValidator;
-		this.$options = options;
-		this.$childValidators = [];
-
-		this.$rootValidator = this;
-		if (this.$parentValidator) {
-			this.$rootValidator = this.$parentValidator.$rootValidator;
-			this.$parentValidator.$childValidators.push(this);
-		}
-
-		this._inputElements = [];
-	}
-
-	/**
-  * Setup elements after defining reactive
-  */
-
-
-	createClass(InputValidator, [{
-		key: 'setup',
-		value: function setup() {
-			this.$options.vue.util.defineReactive(this, '$states', {});
-		}
-
-		/**
-   * Bind a new element to a validator
-   */
-
-	}, {
-		key: 'bindElement',
-		value: function bindElement(element, binding, vnode) {
-			var el = null;
-			for (var i = 0, len = this._inputElements.length; i < len; ++i) {
-				var item = this._inputElements[i];
-				if (item.$element === element) {
-					el = item;
-					break;
-				}
+			var p = this.options.Promise || Promise;
+			var promises = [];
+			for (var name in this.rules) {
+				var status = this.status[name] = this.status[name] || {};
+				var r = this.setValue(name, status.value || '');
+				if (r && r.then) promises.push(r);
 			}
-			if (!el) {
-				el = new InputElementValidator(element, this);
-				this._inputElements.push(el);
-			}
-			el.update(binding, vnode);
-		}
-		/**
-   * Unbind the element
-   */
-
-	}, {
-		key: 'unbindElement',
-		value: function unbindElement(element) {
-			var elements = [];
-			for (var i = 0, len = this._inputElements.length; i < len; ++i) {
-				var item = this._inputElements[i];
-				if (item.$element !== element) elements.push(element);else item.unbind();
-			}
-		}
-		/**
-   * Validate all the elements on the input
-   */
-
-	}, {
-		key: 'validateAll',
-		value: function validateAll(validateChildren, state) {
-			var _this = this;
-
-			this.$options.vue.set(this, '$states', {});
-			state = state || {};
-			var inputValidation = [];
-			for (var i = 0, len = this._inputElements.length; i < len; ++i) {
-				inputValidation.push(this._inputElements[i].validate(state, true).then(noop, noop));
-			}return this.$options.Promise.all(inputValidation).then(function () {
-				if (validateChildren === false) return null;
-
-				var childValidation = [];
-				for (var _i = 0, _len = _this.$childValidators.length; _i < _len; ++_i) {
-					childValidation.push(_this.$childValidators[_i].validateAll(true, state).then(noop, noop));
-				}return _this.$options.Promise.all(childValidation);
-			}).then(function () {
-				if (state.errors) {
-					var err = new Error();
-					err.errors = state.errors;
-					err.state = state;
-					throw err;
-				}
-				return state;
-			});
-		}
-		/**
-   * Set the error for the validate
-   */
-
-	}, {
-		key: 'setState',
-		value: function setState(name, state) {
-			if (!state) {
-				this.$options.vue.set(this.$states, name, null);
-				return;
-			}
-			var old = this.$states[name];
-			this.$options.vue.set(this.$states, name, {
-				dirty: old && old.dirty || state.dirty,
-				errors: state.errors,
-				errorsTimestamp: state.errors ? Date.now() : null
-			});
-		}
-		/**
-   * Remark the field as pure
-   */
-
-	}, {
-		key: 'setPristine',
-		value: function setPristine(name) {
-			var old = this.$states[name];
-			if (old && old.dirty) {
-				this.$options.vue.set(this.$states, name, {
-					dirty: false,
-					errors: old.errors
-				});
-			}
-		}
-		/**
-   * Remark all the fields as pure
-   */
-
-	}, {
-		key: 'setPristineAll',
-		value: function setPristineAll() {
-			this.$options.vue.set(this, '$states', {});
-		}
-		/**
-   * Check for error
-   */
-
-	}, {
-		key: 'hasError',
-		value: function hasError(name, debounce) {
-			var state = this.getState(name);
-			if (state == null) return false;
-			var hasError = state.dirty && state.errors;
-			if (!hasError) return false;
-
-			if (debounce == null || !state.errorsTimestamp) return true;
-
-			debounce = debounce | 0;
-			return Date.now() >= state.errorsTimestamp + debounce;
-		}
-		/**
-   * Get a state
-   */
-
-	}, {
-		key: 'getState',
-		value: function getState(name) {
-			var state = this.$states[name];
-			if (state != null) return state;
-			for (var i = 0, len = this.$childValidators.length; i < len; ++i) {
-				var childState = this.$childValidators[i].getState(name);
-				if (childState != null) return childState;
-			}
-			return null;
-		}
-		/**
-   * Destroy the validator
-   */
-
-	}, {
-		key: '_destroy',
-		value: function _destroy() {
-			this.$childValidators = [];
-			if (this.$parentValidator) {
-				for (var i = 0, len = this.$parentValidator.$childValidators.length; i < len; ++i) {
-					var item = this.$parentValidator.$childValidators[i];
-					if (item === this) {
-						this.$parentValidator.$childValidators.splice(i, 1);
-						break;
+			return p.all(promises).then(function () {
+				var errors = {};
+				var values = {};
+				var hasError = false;
+				for (var _name in _this2.rules) {
+					var field = _this2.status[_name] = _this2.status[_name] || {};
+					if (field.status !== 'success') {
+						errors[_name] = _this2.errors[_name];
+						hasError = true;
+					} else {
+						values[_name] = field.value;
 					}
 				}
-			}
-
-			for (var _i2 = 0, _len2 = this._inputElements.length; _i2 < _len2; ++_i2) {
-				var el = this._inputElements[_i2];
-				el.unbind();
-			}
-			this._inputElements = [];
+				if (hasError) return p.reject(errors);
+				return values;
+			});
 		}
 	}]);
-	return InputValidator;
+	return Validator;
 }();
 
 
-// Noop util
-function noop() {}
+Object.defineProperty(Validator, 'INPUT_TAG', {
+	writable: false,
+	configurable: false,
+	value: INPUT_TAG
+});
 
 var index = {
 	install: function install(vue, options) {
-		options = {
-			vue: vue,
-			Promise: options.Promise || Promise
-		};
-		vue.directive('validate', {
+		options = options || {};
+
+		var name = options.directive || "validate";
+		vue.directive(name, {
 			bind: function bind(el, binding, vnode) {
-				vnode.context.$inputValidator.bindElement(el, binding, vnode);
-			},
-			update: function update(el, binding, vnode) {
-				vnode.context.$inputValidator.bindElement(el, binding, vnode);
-			},
-			unbind: function unbind(el, binding, vnode) {
-				if (vnode.context.$inputValidator) vnode.context.$inputValidator.unbindElement(el);
+				if (!vnode.context.$validatorOwn) throw new Error("Invalid validator context.\nDid you set validate: true on the root context component? " + vnode.context.name);
+
+				var name = el.getAttribute("name");
+				vnode.context.$validator.setRule(name, binding.value);
+				if (!binding.modifiers.dirty && el.value) vnode.context.$validator.setValue(name, el.value);
+
+				var evt = binding.arg || 'input';
+				el.addEventListener(evt, function (ev) {
+					vnode.context.$validator.setValue(name, ev.target.value);
+				});
 			}
 		});
 
-		// Create $inputValidator
-		vue.mixin({
-			created: function created() {
-				var v = null;
-				if (!this.$parent) v = new InputValidator(this, null, options);else if (this.$options.validateScope) v = new InputValidator(this, this.$parent.$inputValidator, options);
-
-				if (v != null) {
-					vue.util.defineReactive(this, '$inputValidator', v);
-					v.setup();
-				} else vue.util.defineReactive(this, '$inputValidator', this.$parent.$inputValidator);
-			},
-			destroyed: function destroyed() {
-				if (this.hasOwnProperty('$inputValidator')) {
-					this.$inputValidator._destroy();
-					delete this.$inputValidator;
+		// Set the validator
+		Object.defineProperty(vue.prototype, '$validator', {
+			get: function get() {
+				if (this.$root === this || this.$options.validate) {
+					var parentValidator = this.$parent ? this.$parent.$validator : null;
+					var validator = new Validator(parentValidator, { vue: vue });
+					Object.defineProperty(this, '$validator', {
+						value: validator
+					});
+					Object.defineProperty(this, '$validatorOwn', {
+						value: true
+					});
+					return validator;
 				}
+				return this.$parent.$validator;
 			}
 		});
 
-		// $error shortcut
-		vue.prototype.$error = function (name, debounce) {
-			return this.$inputValidator.hasError(name, debounce);
-		};
-	},
-	registerRule: function registerRule(name, rule) {
-		Rules.register(name, rule);
+		// Invalid validator
+		Object.defineProperty(vue.prototype, '$errors', {
+			get: function get() {
+				return this.$validator.errors;
+			}
+		});
 	}
 };
 
