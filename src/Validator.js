@@ -8,8 +8,9 @@ export default class Validator {
 	constructor( parent, options ) {
 		options = options || {};
 		this.options = options;
-		this.status = {};
-		this.rules  = {};
+		this.status  = {};
+		this.rules   = {};
+		this.elementsStorage = new (options.WeakMap || WeakMap);
 		if ( options.vue )
 			options.vue.util.defineReactive( this, 'errors', new ErrorBag( options ) );
 		else
@@ -17,20 +18,77 @@ export default class Validator {
 		
 	}
 	/**
-	 * Set a rule for a field on the validator
+	 * Bind a validator
 	 */
-	setValidator( name, rule ) {
-		this.rules[name] = {
-			name: name,
+	bindElement( rule, el, binding, vnode ) {
+		const isNative = (binding.modifiers.native || !vnode.componentInstance);
+		
+		const name = getValidatorName( el, binding, vnode, isNative );
+		if ( !name )
+			throw new Error( `Missing attribute name on validator` );
+
+		const evt = binding.arg || 'input';
+
+		const data = {
+			name:    name,
+			value:   binding.value,
+			native:  isNative,
+			event:   evt,
+			eventCallback: ( ev ) => {
+				this.setValue( name, getEventValue( ev ) );
+			},
+		};
+		if ( isNative ) {
+			el.addEventListener( evt, data.eventCallback );
+			data.unbind = function() {
+				el.removeEventListener( evt, data.eventCallback );
+			};
+		} else {
+			const c = vnode.componentInstance;
+			c.$on( evt, data.eventCallback );
+			data.unbind = function() {
+				c.$off( evt, data.eventCallback );
+			};
+		};
+		this.rules[data.name] = {
+			name: data.name,
 			rule: rule
 		};
-		this.errors.$setRaw( name, false );
+		this.elementsStorage.set( el, data );
 	}
 	/**
-	 * Set a rule for a field on the validator
+	 * Update an element
 	 */
-	removeValidator( name ) {
+	updateElement( rule, el, binding, vnode ) {
+		const data = this.elementsStorage.get( el );
+		if ( !data ) {
+			this.bindElement( rule, el, binding, vnode );
+			return;
+		}
+		
+		const name = getValidatorName( el, binding, vnode, data.native );
+		if ( ( data.name !== name ) || ( data.value !== binding.value ) ) {
+			const oldStatus = this.status[data.name];
+			const oldErrors = this.errors.$getRaw( data.name );
+			this.unbindElement( el );
+			this.bindElement( rule, el, binding, vnode );
+			this.status[ name ] = oldStatus;
+			this.errors.$setRaw( name, oldErrors );
+		}
+	}
+	/**
+	 * Unbind an element
+	 */
+	unbindElement( el ) {
+		const data = this.elementsStorage.get( el );
+		if ( !data )
+			return;
+		const name = data.name;
 		this.rules[name] = null;
+		this.status[name] = null;
+		this.errors.$remove( name );
+		data.unbind();
+		this.elementsStorage.delete( el );
 	}
 	/**
 	 * Set an error for a field
@@ -78,6 +136,7 @@ export default class Validator {
 					return null;
 				if ( r === false ) {
 					this.errors.$add( name, true, INPUT_TAG );
+					status.error  = true;
 					status.status = 'error';
 				} else {
 					this.errors.$clear( name, INPUT_TAG );
@@ -89,12 +148,14 @@ export default class Validator {
 				if ( status.validationID !== id )
 					return null;
 				this.errors.$add( name, err, INPUT_TAG );
+				status.error  = err;
 				status.status = 'error';
 				return status.status;
 			});
 			return status.status;
 		} else if ( result === false ) {
 			this.errors.$add( name, error || true, INPUT_TAG );
+			status.error  = error;
 			status.status = 'error';
 			return status.status;
 		} else {
@@ -159,3 +220,21 @@ Object.defineProperty(Validator, 'INPUT_TAG', {
 	configurable: false,
 	value:        INPUT_TAG,
 });
+
+
+// Get the name for the validator
+function getValidatorName( el, binding, vnode, isNative ) {
+	if ( !isNative ) {
+		const instance = vnode.componentInstance;
+		if ( instance && instance.$props && instance.$props.name )
+			return instance.$props.name;
+	}
+	return el.getAttribute( "name" );
+}
+
+function getEventValue( ev ) {
+	if ( ev.target && (ev.target.value != null))
+		return ev.target.value;
+	return ev;
+}
+

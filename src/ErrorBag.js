@@ -17,6 +17,15 @@ export default class ErrorBag {
 		});
 	}
 	
+	$remove( name ) {
+		const errors = this.$internal.errors[ name ];
+		if ( errors != null )
+			this.$internal.errors[ name ] = null;
+		if ( this[ name ] != null )
+			this[ name ] = null;
+	}
+
+	
 	$clear( name, tag ) {
 		const errors = this.$internal.errors[ name ];
 		if ( !errors || errors.length <= 0 )
@@ -62,6 +71,10 @@ export default class ErrorBag {
 			errors = [].concat( errors );
 		this.$internal.errors[ name ] = errors;
 		this.$update( name );
+	}
+
+	$getRaw( name ) {
+		return this.$internal.errors[ name ];
 	}
 
 	$any() {
