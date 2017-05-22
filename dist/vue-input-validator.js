@@ -186,7 +186,7 @@ var Validator = function () {
 				var id = {};
 				status.validationID = id;
 				status.status = result.then(function (r) {
-					if (status.validationID !== id) return status.status;
+					if (status.validationID !== id) return null;
 					if (r === false) {
 						_this.errors.$add(name, true, INPUT_TAG);
 						status.status = 'error';
@@ -197,7 +197,7 @@ var Validator = function () {
 					}
 					return status.status;
 				}, function (err) {
-					if (status.validationID !== id) return status.status;
+					if (status.validationID !== id) return null;
 					_this.errors.$add(name, err, INPUT_TAG);
 					status.status = 'error';
 					return status.status;
@@ -339,11 +339,12 @@ var RuleSet = function () {
 					var result = c.callback.apply(null, [value].concat(args));
 					if (result === false) return false;else if (result && result.then) {
 						return result.then(function () {
-							continuation(value, i + 1);
+							return continuation(value, i + 1);
 						});
 					}
 					++i;
 				}
+				return true;
 			};
 			return function (v) {
 				return continuation(v, 0);
