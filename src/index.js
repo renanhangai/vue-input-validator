@@ -7,6 +7,9 @@ export default {
 		const name = options.directive || "validate";
 		vue.directive( name, {
 			bind( el, binding, vnode ) {
+				if ( !vnode.context.$validatorOwn )
+					throw new Error( `Invalid validator context.\nDid you set validate: true on the root context component? ${vnode.context.name}` );
+				
 				const name = el.getAttribute( "name" );
 				vnode.context.$validator.setRule( name, binding.value );
 				if ( ( !binding.modifiers.dirty ) && ( el.value ) )
@@ -28,12 +31,16 @@ export default {
 					Object.defineProperty( this, '$validator', {
 						value:        validator,
 					});
+					Object.defineProperty( this, '$validatorOwn', {
+						value: true,
+					});
 					return validator;
 				}
 				return this.$parent.$validator;
 			}
 		});
 
+		// Invalid validator
 		Object.defineProperty( vue.prototype, '$errors', {
 			get: function() {
 				return this.$validator.errors;
