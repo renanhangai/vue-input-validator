@@ -51,7 +51,7 @@ export default class ErrorBag {
 			this[ name ] = errorView;
 	}
 
-	$set( name, error, tag ) {	
+	$add( name, error, tag ) {	
 		const errors = this[ name ] || [];
 		errors.push({ name, error, tag });
 		this.$setRaw( name, errors );
@@ -74,9 +74,13 @@ export default class ErrorBag {
 	}
 	
 	static errorAsString( error ) {
-		if ( typeof(error) === 'string' )
+		if ( !error )
+			return "";
+		else if ( typeof(error) === 'string' )
 			return error;
-		return "";
+		else if ( typeof(error.message) === 'string' )
+			return error.message;
+		return "Error";
 	}
 	
 };

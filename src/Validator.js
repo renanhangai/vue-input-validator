@@ -19,11 +19,32 @@ export default class Validator {
 	/**
 	 * Set a rule for a field on the validator
 	 */
-	setRule( name, rule ) {
+	setValidator( name, rule ) {
 		this.rules[name] = {
 			name: name,
 			rule: rule
 		};
+	}
+	/**
+	 * Set a rule for a field on the validator
+	 */
+	removeValidator( name ) {
+		this.rules[name] = null;
+	}
+	/**
+	 * Set an error for a field
+	 */
+	setError( name, error, options ) {
+		const rule = this.rules[name];
+		if ( !rule )
+			return;
+
+		const status = this.status[name] = this.status[name] || {};
+		status.validationID = null;
+		status.status = 'error';
+		if ( options && options.clear === false )
+			this.errors.$clear( name, INPUT_TAG );
+		this.errors.$add( name, error, error && error.persistent ? null : INPUT_TAG );
 	}
 	/**
 	 * Set the value for a field
@@ -45,7 +66,7 @@ export default class Validator {
 				if ( status.validationID !== id )
 					return status.status;
 				if ( r === false ) {
-					this.errors.$set( name, true, INPUT_TAG );
+					this.errors.$add( name, true, INPUT_TAG );
 					status.status = 'error';
 				} else {
 					this.errors.$clear( name, INPUT_TAG );
@@ -56,13 +77,13 @@ export default class Validator {
 			}, ( err ) => {
 				if ( status.validationID !== id )
 					return status.status;
-				this.errors.$set( name, err, INPUT_TAG );
+				this.errors.$add( name, err, INPUT_TAG );
 				status.status = 'error';
 				return status.status;
 			});
 			return status.status;
 		} else if ( result === false ) {
-			this.errors.$set( name, true, INPUT_TAG );
+			this.errors.$add( name, true, INPUT_TAG );
 			status.status = 'error';
 			return status.status;
 		} else {
@@ -79,6 +100,9 @@ export default class Validator {
 		const p = this.options.Promise || Promise;
 		const promises = [];
 		for ( let name in this.rules ) {
+			const rule   = this.rules[ name ];
+			if ( !rule )
+				continue;
 			const status = this.status[name] = this.status[name] || {};
 			const r      = this.setValue( name, status.value || '' );
 			if ( r && r.then )
@@ -90,6 +114,10 @@ export default class Validator {
 				const values = {};
 				let   hasError = false;
 				for ( let name in this.rules ) {
+					const rule   = this.rules[ name ];
+					if ( !rule )
+						continue;
+					
 					const field = this.status[name] = this.status[name] || {};
 					if ( field.status !== 'success' ) {
 						errors[ name ] = this.errors[ name ];
