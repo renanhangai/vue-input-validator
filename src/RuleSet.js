@@ -60,26 +60,40 @@ export default class RuleSet {
 	makeCallbackChain( callbacks ) {
 		if ( !callbacks || callbacks.length <= 0 )
 			return false;
-		let i = 0;
-		const continuation = function( value, i ) {
-			i = i|0;
-			while ( i < callbacks.length ) {
-				const c = callbacks[ i ];
+		const continuation = function( value, data ) {
+			if ( data.cancelled )
+				return false;
+			while ( data.i < callbacks.length ) {
+				const c = callbacks[ data.i ];
 				const args   = c.args || [];
 				const result = c.callback.apply( null, [value].concat( args ) );
+				data.current = result;
 				if ( result === false )
 					return false;
 				else if ( result && result.then ) {
 					return result.then(function() {
-						return continuation( value, i+1 );
+						data.i += 1;
+						return continuation( value, data );
 					});
 				}
-				++i;
+				++data.i;
 			}
 			return true;
 		};
+		continuation.cancel = function( data ) {
+			if ( !data.cancelled ) {
+				data.cancelled = true;
+				if ( data.current && typeof(data.current.cancel) === 'function' )
+					data.current.cancel();
+			}
+		};
 		return function( v ) {
-			return continuation( v, 0 );
+			const data = { cancelled: false, i: 0 };
+			const r = continuation( v, data );
+			if ( typeof(r) === 'object' ) {
+				r.cancel = function() { continuation.cancel( data ); };
+			}
+			return r;
 		};
 	}
 	

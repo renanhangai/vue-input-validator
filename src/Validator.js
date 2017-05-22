@@ -58,8 +58,11 @@ export default class Validator {
 		const status = this.status[name] = this.status[name] || {};
 		this.errors.$clear( name, INPUT_TAG );
 		status.validationID = null;
+		if ( status.result && typeof(status.result.cancel) === 'function' )
+			status.result.cancel();
 		
 		const result = rule.rule( value );
+		status.result = result;
 		if ( result && result.then ) {
 			let id = {};
 			status.validationID = id;
