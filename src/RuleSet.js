@@ -71,11 +71,12 @@ export default class RuleSet {
 					return false;
 				else if ( result && result.then ) {
 					return result.then(function() {
-						continuation( value, i+1 );
+						return continuation( value, i+1 );
 					});
 				}
 				++i;
 			}
+			return true;
 		};
 		return function( v ) {
 			return continuation( v, 0 );

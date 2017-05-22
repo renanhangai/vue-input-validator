@@ -65,7 +65,7 @@ export default class Validator {
 			status.validationID = id;
 			status.status = result.then(( r ) => {
 				if ( status.validationID !== id )
-					return status.status;
+					return null;
 				if ( r === false ) {
 					this.errors.$add( name, true, INPUT_TAG );
 					status.status = 'error';
@@ -77,7 +77,7 @@ export default class Validator {
 				return status.status;
 			}, ( err ) => {
 				if ( status.validationID !== id )
-					return status.status;
+					return null;
 				this.errors.$add( name, err, INPUT_TAG );
 				status.status = 'error';
 				return status.status;
