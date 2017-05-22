@@ -105,15 +105,25 @@ export default class Validator {
 		}
 	}
 	/**
-	 * Validate the current validator
+	 * Validate the current fields
 	 */
-	validate() {
+	validate( set ) {
 		const p = this.options.Promise || Promise;
 		const promises = [];
-		for ( let name in this.rules ) {
-			const rule   = this.rules[ name ];
+		if ( set == null ) {
+			set = [];
+			for ( let name in this.rules ) {
+				if ( !this.rules[ name ] )
+					continue;
+				set.push( name );
+			}
+		}
+		
+		for ( let i = 0, len = set.length; i<len; ++i ) {
+			const name = set[ i ];
+			const rule = this.rules[ name ];
 			if ( !rule )
-				continue;
+				throw new Error( `Unknown field "${name}"` );
 			const status = this.status[name] = this.status[name] || {};
 			const r      = this.setValue( name, status.value || '' );
 			if ( r && r.then )
