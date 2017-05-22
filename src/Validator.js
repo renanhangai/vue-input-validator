@@ -29,30 +29,32 @@ export default class Validator {
 
 		const evt = binding.arg || 'input';
 
+		const cleanup = [];
 		const data = {
 			name:    name,
 			value:   binding.value,
 			native:  isNative,
 			event:   evt,
-			eventCallback: ( ev ) => {
-				this.setValue( name, getEventValue( ev ) );
+			unbind() {
+				for ( let i = 0, len = cleanup.length; i<len; ++i )
+					cleanup[ i ].call();
 			},
 		};
-		if ( isNative ) {
-			el.addEventListener( evt, data.eventCallback );
-			data.unbind = function() {
-				el.removeEventListener( evt, data.eventCallback );
-			};
-		} else {
-			const c = vnode.componentInstance;
-			c.$on( evt, data.eventCallback );
-			data.unbind = function() {
-				c.$off( evt, data.eventCallback );
-			};
-		};
+
+
+		const comp    = isNative ? el : vnode.componentInstance;
+		if ( evt !== 'input' ) {
+			addEvent( cleanup, comp, 'input', ( ev ) => {
+				this.errors.$clear( name, INPUT_TAG );
+			});
+		}
+		addEvent( cleanup, comp, evt, ( ev ) => {
+			this.setValue( name, getEventValue( ev ) );
+		});
 		this.rules[data.name] = {
-			name: data.name,
-			rule: rule
+			name:      data.name,
+			rule:      rule,
+			autoclean: !!binding.modifiers.autoclean,
 		};
 		this.elementsStorage.set( el, data );
 	}
@@ -238,3 +240,17 @@ function getEventValue( ev ) {
 	return ev;
 }
 
+function addEvent( cleanup, obj, evt, cb ) {
+	let onOff = (typeof(obj.$on) === 'function');
+	if ( onOff ) {
+		obj.$on( evt, cb );
+		cleanup.push(function() {
+			obj.$off( evt, cb );
+		});
+	} else {
+		obj.addEventListener( evt, cb );
+		cleanup.push(function() {
+			obj.removeEventListener( evt, cb );
+		});
+	}
+}
