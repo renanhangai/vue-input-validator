@@ -138,6 +138,7 @@ var Validator = function () {
 				name: name,
 				rule: rule
 			};
+			this.errors.$setRaw(name, false);
 		}
 		/**
    * Set a rule for a field on the validator
@@ -262,7 +263,102 @@ Object.defineProperty(Validator, 'INPUT_TAG', {
 	value: INPUT_TAG
 });
 
+/**
+ *
+ */
+var RuleSet = function () {
+	function RuleSet() {
+		classCallCheck(this, RuleSet);
+
+		this.rules = {};
+	}
+
+	createClass(RuleSet, [{
+		key: 'register',
+		value: function register(name, rule) {
+			this.rules[name] = {
+				name: name,
+				rule: rule
+			};
+		}
+	}, {
+		key: 'getCallback',
+		value: function getCallback(name) {
+			var r = this.rules[name];
+			if (!r) throw new Error('Invalid rule "' + name + '"');
+			return r.rule;
+		}
+	}, {
+		key: 'parse',
+		value: function parse(rule) {
+			var callbacks = this.parseInternal(rule);
+			return this.makeCallbackChain(callbacks);
+		}
+	}, {
+		key: 'parseInternal',
+		value: function parseInternal(rule) {
+			var callbacks = [];
+			if (typeof rule === 'string') callbacks = callbacks.concat(this.parseInternalString(rule));else if (Array.isArray(rule)) {
+				for (var i = 0, len = rule.length; i < len; ++i) {
+					callbacks = callbacks.concat(this.parseInternal(rule));
+				}
+			} else if (typeof rule === 'function') {
+				callbacks.push({
+					callback: rule
+				});
+			} else {
+				throw new Error("Invalid rule to parse: " + rule);
+			}
+			return callbacks;
+		}
+	}, {
+		key: 'parseInternalString',
+		value: function parseInternalString(str) {
+			var rules = str.split("|");
+			var callbacks = [];
+			for (var i = 0, len = rules.length; i < len; ++i) {
+				var args = rules[i].split(":");
+				var rule = args.shift();
+				callbacks.push({
+					args: args,
+					callback: this.getCallback(rule)
+				});
+			}
+			return callbacks;
+		}
+	}, {
+		key: 'makeCallbackChain',
+		value: function makeCallbackChain(callbacks) {
+			if (!callbacks || callbacks.length <= 0) return false;
+			var i = 0;
+			var continuation = function continuation(value, i) {
+				i = i | 0;
+				while (i < callbacks.length) {
+					var c = callbacks[i];
+					var args = c.args || [];
+					var result = c.callback.apply(null, [value].concat(args));
+					if (result === false) return false;else if (result && result.then) {
+						return result.then(function () {
+							continuation(value, i + 1);
+						});
+					}
+					++i;
+				}
+			};
+			return function (v) {
+				return continuation(v, 0);
+			};
+		}
+	}]);
+	return RuleSet;
+}();
+
+var ruleset = new RuleSet();
+
 var index = {
+	registerRule: function registerRule(name, rule) {
+		ruleset.register(name, rule);
+	},
 	install: function install(vue, options) {
 		options = options || {};
 
@@ -276,17 +372,17 @@ var index = {
 
 				var name = getValidatorName(el, binding, vnode, isNative);
 				if (!name) throw new Error('Missing attribute name on validator');
-				validator.setRule(name, binding.value);
+				validator.setValidator(name, ruleset.parse(binding.value));
 
 				var evt = binding.arg || 'input';
 				if (isNative) {
 					if (!binding.modifiers.dirty && el.value) validator.setValue(name, el.value);
 					el.addEventListener(evt, function (ev) {
-						validator.setValue(name, ev.target && ev.target.value || ev);
+						validator.setValue(name, getEventValue(ev));
 					});
 				} else {
 					vnode.componentInstance.$on(evt, function (ev) {
-						validator.setValue(name, ev.target && ev.target.value || ev);
+						validator.setValue(name, getEventValue(ev));
 					});
 				}
 			}
@@ -299,6 +395,11 @@ var index = {
 				if (instance && instance.$props && instance.$props.name) return instance.$props.name;
 			}
 			return el.getAttribute("name");
+		}
+
+		function getEventValue(ev) {
+			if (ev.target && ev.target.value != null) return ev.target.value;
+			return ev;
 		}
 
 		// Set the validator
