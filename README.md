@@ -20,7 +20,7 @@ Simple
 ```html
 <form @submit.prevent="submit">
 	<input v-validate="'required'" name="name" />
-	<div v-if="$inputValidator.hasError( 'name' )">
+	<div v-if="$errors.name">
 		Invalid input
 	</div>
 </form>
@@ -28,11 +28,11 @@ Simple
 ```js
 export default {
 	// Creates a new scope for the validator
-	validatorScope: true; 
+	validate: true; 
 	// ....
 	methods: {
 		submit() {
-			this.$inputValidator.validateAll()
+			this.$validator.validate()
 				.then(() => {
 					// ... Do your thing
 				}, () => {
@@ -61,10 +61,5 @@ Register a new validation rule
 VueInputValidator.registerRule( 'number', function( v ) {
     return parseInt(v, 10) == v;
 });
-// Lower
-VueInputValidator.registerRule( 'lower', function( v ) {
-    return v.toLowerCase();
-});
-
 ```
 
