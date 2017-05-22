@@ -4,6 +4,22 @@
 	(global.VueInputValidator = factory());
 }(this, (function () { 'use strict';
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+  return typeof obj;
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
+
+
+
+
+
+
+
+
+
+
+
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
@@ -180,8 +196,10 @@ var Validator = function () {
 			var status = this.status[name] = this.status[name] || {};
 			this.errors.$clear(name, INPUT_TAG);
 			status.validationID = null;
+			if (status.result && typeof status.result.cancel === 'function') status.result.cancel();
 
 			var result = rule.rule(value);
+			status.result = result;
 			if (result && result.then) {
 				var id = {};
 				status.validationID = id;
@@ -330,24 +348,38 @@ var RuleSet = function () {
 		key: 'makeCallbackChain',
 		value: function makeCallbackChain(callbacks) {
 			if (!callbacks || callbacks.length <= 0) return false;
-			var i = 0;
-			var continuation = function continuation(value, i) {
-				i = i | 0;
-				while (i < callbacks.length) {
-					var c = callbacks[i];
+			var continuation = function continuation(value, data) {
+				if (data.cancelled) return false;
+				while (data.i < callbacks.length) {
+					var c = callbacks[data.i];
 					var args = c.args || [];
 					var result = c.callback.apply(null, [value].concat(args));
+					data.current = result;
 					if (result === false) return false;else if (result && result.then) {
 						return result.then(function () {
-							return continuation(value, i + 1);
+							data.i += 1;
+							return continuation(value, data);
 						});
 					}
-					++i;
+					++data.i;
 				}
 				return true;
 			};
+			continuation.cancel = function (data) {
+				if (!data.cancelled) {
+					data.cancelled = true;
+					if (data.current && typeof data.current.cancel === 'function') data.current.cancel();
+				}
+			};
 			return function (v) {
-				return continuation(v, 0);
+				var data = { cancelled: false, i: 0 };
+				var r = continuation(v, data);
+				if ((typeof r === 'undefined' ? 'undefined' : _typeof(r)) === 'object') {
+					r.cancel = function () {
+						continuation.cancel(data);
+					};
+				}
+				return r;
 			};
 		}
 	}]);
