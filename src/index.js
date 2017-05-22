@@ -60,7 +60,7 @@ export default {
 			get: function() {
 				if ( this.$options.validate === true ) {
 					const parentValidator = this.$parent ? this.$parent.$validator : null;
-					const validator = new Validator( parentValidator, { vue } );
+					const validator = new Validator( parentValidator, { vue, Promise: options.Promise } );
 					Object.defineProperty( this, '$validator', {
 						value:        validator,
 					});

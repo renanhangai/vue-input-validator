@@ -60,8 +60,15 @@ export default class Validator {
 		status.validationID = null;
 		if ( status.result && typeof(status.result.cancel) === 'function' )
 			status.result.cancel();
-		
-		const result = rule.rule( value );
+
+		let result;
+		let error = false;
+		try {
+			result = rule.rule( value );
+		} catch( e ) {
+			result = false;
+			error  = e;
+		}
 		status.result = result;
 		if ( result && result.then ) {
 			let id = {};
@@ -87,7 +94,7 @@ export default class Validator {
 			});
 			return status.status;
 		} else if ( result === false ) {
-			this.errors.$add( name, true, INPUT_TAG );
+			this.errors.$add( name, error || true, INPUT_TAG );
 			status.status = 'error';
 			return status.status;
 		} else {
