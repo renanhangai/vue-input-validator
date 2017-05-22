@@ -377,10 +377,8 @@ Object.defineProperty(Validator, 'INPUT_TAG', {
 
 // Get the name for the validator
 function getValidatorName(el, binding, vnode, isNative) {
-	if (!isNative) {
-		var instance = vnode.componentInstance;
-		if (instance && instance.$props && instance.$props.name) return instance.$props.name;
-	}
+	var instance = vnode.componentInstance;
+	if (instance && instance.$props && instance.$props.name) return instance.$props.name;
 	return el.getAttribute("name");
 }
 
