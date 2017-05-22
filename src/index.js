@@ -1,6 +1,12 @@
 import Validator from './Validator';
+import RuleSet   from './RuleSet';
+
+const ruleset = new RuleSet;
 
 export default {
+	registerRule( name, rule ) {
+		ruleset.register( name, rule );
+	},
 	install( vue, options ) {
 		options = options || {};
 
@@ -16,19 +22,18 @@ export default {
 				const name = getValidatorName( el, binding, vnode, isNative );
 				if ( !name )
 					throw new Error( `Missing attribute name on validator` );
-				validator.setRule( name, binding.value );
-
+				validator.setValidator( name, ruleset.parse( binding.value ) );
 				
 				const evt = binding.arg || 'input';
 				if ( isNative ) {
 					if ( ( !binding.modifiers.dirty ) && ( el.value ) )
 						validator.setValue( name, el.value );
 					el.addEventListener( evt, function( ev ) {
-						validator.setValue( name, (ev.target && ev.target.value) || ev );
+						validator.setValue( name, getEventValue( ev ) );
 					});
 				} else {
 					vnode.componentInstance.$on( evt, function( ev ) {
-						validator.setValue( name, (ev.target && ev.target.value) || ev );
+						validator.setValue( name, getEventValue( ev ) );
 					});
 				}
 			}
@@ -42,6 +47,12 @@ export default {
 					return instance.$props.name;
 			}
 			return el.getAttribute( "name" );
+		}
+
+		function getEventValue( ev ) {
+			if ( ev.target && (ev.target.value != null))
+				return ev.target.value;
+			return ev;
 		}
 
 		// Set the validator

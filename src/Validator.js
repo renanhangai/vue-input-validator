@@ -24,6 +24,7 @@ export default class Validator {
 			name: name,
 			rule: rule
 		};
+		this.errors.$setRaw( name, false );
 	}
 	/**
 	 * Set a rule for a field on the validator
