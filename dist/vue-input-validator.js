@@ -198,7 +198,14 @@ var Validator = function () {
 			status.validationID = null;
 			if (status.result && typeof status.result.cancel === 'function') status.result.cancel();
 
-			var result = rule.rule(value);
+			var result = void 0;
+			var error = false;
+			try {
+				result = rule.rule(value);
+			} catch (e) {
+				result = false;
+				error = e;
+			}
 			status.result = result;
 			if (result && result.then) {
 				var id = {};
@@ -222,7 +229,7 @@ var Validator = function () {
 				});
 				return status.status;
 			} else if (result === false) {
-				this.errors.$add(name, true, INPUT_TAG);
+				this.errors.$add(name, error || true, INPUT_TAG);
 				status.status = 'error';
 				return status.status;
 			} else {
@@ -440,7 +447,7 @@ var index = {
 			get: function get() {
 				if (this.$options.validate === true) {
 					var parentValidator = this.$parent ? this.$parent.$validator : null;
-					var validator = new Validator(parentValidator, { vue: vue });
+					var validator = new Validator(parentValidator, { vue: vue, Promise: options.Promise });
 					Object.defineProperty(this, '$validator', {
 						value: validator
 					});
