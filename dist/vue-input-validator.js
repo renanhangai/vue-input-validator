@@ -79,8 +79,8 @@ var ErrorBag = function () {
 			if (this.$internal.options.vue) this.$internal.options.vue.set(this, name, errorView);else this[name] = errorView;
 		}
 	}, {
-		key: '$set',
-		value: function $set(name, error, tag) {
+		key: '$add',
+		value: function $add(name, error, tag) {
 			var errors = this[name] || [];
 			errors.push({ name: name, error: error, tag: tag });
 			this.$setRaw(name, errors);
@@ -104,8 +104,8 @@ var ErrorBag = function () {
 	}], [{
 		key: 'errorAsString',
 		value: function errorAsString(error) {
-			if (typeof error === 'string') return error;
-			return "";
+			if (!error) return "";else if (typeof error === 'string') return error;else if (typeof error.message === 'string') return error.message;
+			return "Error";
 		}
 	}]);
 	return ErrorBag;
@@ -132,12 +132,37 @@ var Validator = function () {
 
 
 	createClass(Validator, [{
-		key: 'setRule',
-		value: function setRule(name, rule) {
+		key: 'setValidator',
+		value: function setValidator(name, rule) {
 			this.rules[name] = {
 				name: name,
 				rule: rule
 			};
+		}
+		/**
+   * Set a rule for a field on the validator
+   */
+
+	}, {
+		key: 'removeValidator',
+		value: function removeValidator(name) {
+			this.rules[name] = null;
+		}
+		/**
+   * Set an error for a field
+   */
+
+	}, {
+		key: 'setError',
+		value: function setError(name, error, options) {
+			var rule = this.rules[name];
+			if (!rule) return;
+
+			var status = this.status[name] = this.status[name] || {};
+			status.validationID = null;
+			status.status = 'error';
+			if (options && options.clear === false) this.errors.$clear(name, INPUT_TAG);
+			this.errors.$add(name, error, error && error.persistent ? null : INPUT_TAG);
 		}
 		/**
    * Set the value for a field
@@ -162,7 +187,7 @@ var Validator = function () {
 				status.status = result.then(function (r) {
 					if (status.validationID !== id) return status.status;
 					if (r === false) {
-						_this.errors.$set(name, true, INPUT_TAG);
+						_this.errors.$add(name, true, INPUT_TAG);
 						status.status = 'error';
 					} else {
 						_this.errors.$clear(name, INPUT_TAG);
@@ -172,13 +197,13 @@ var Validator = function () {
 					return status.status;
 				}, function (err) {
 					if (status.validationID !== id) return status.status;
-					_this.errors.$set(name, err, INPUT_TAG);
+					_this.errors.$add(name, err, INPUT_TAG);
 					status.status = 'error';
 					return status.status;
 				});
 				return status.status;
 			} else if (result === false) {
-				this.errors.$set(name, true, INPUT_TAG);
+				this.errors.$add(name, true, INPUT_TAG);
 				status.status = 'error';
 				return status.status;
 			} else {
@@ -200,6 +225,8 @@ var Validator = function () {
 			var p = this.options.Promise || Promise;
 			var promises = [];
 			for (var name in this.rules) {
+				var rule = this.rules[name];
+				if (!rule) continue;
 				var status = this.status[name] = this.status[name] || {};
 				var r = this.setValue(name, status.value || '');
 				if (r && r.then) promises.push(r);
@@ -209,6 +236,9 @@ var Validator = function () {
 				var values = {};
 				var hasError = false;
 				for (var _name in _this2.rules) {
+					var _rule = _this2.rules[_name];
+					if (!_rule) continue;
+
 					var field = _this2.status[_name] = _this2.status[_name] || {};
 					if (field.status !== 'success') {
 						errors[_name] = _this2.errors[_name];
@@ -239,23 +269,42 @@ var index = {
 		var name = options.directive || "validate";
 		vue.directive(name, {
 			bind: function bind(el, binding, vnode) {
-				if (!vnode.context.$validatorOwn) throw new Error("Invalid validator context.\nDid you set validate: true on the root context component? " + vnode.context.name);
+				var validator = vnode.context.$validator;
+				if (!vnode.context.$validatorOwn) throw new Error('Invalid validator context.\nDid you set validate: true on the root context component? ' + vnode.context.name);
 
-				var name = el.getAttribute("name");
-				vnode.context.$validator.setRule(name, binding.value);
-				if (!binding.modifiers.dirty && el.value) vnode.context.$validator.setValue(name, el.value);
+				var isNative = binding.modifiers.native || !vnode.componentInstance;
+
+				var name = getValidatorName(el, binding, vnode, isNative);
+				if (!name) throw new Error('Missing attribute name on validator');
+				validator.setRule(name, binding.value);
 
 				var evt = binding.arg || 'input';
-				el.addEventListener(evt, function (ev) {
-					vnode.context.$validator.setValue(name, ev.target.value);
-				});
+				if (isNative) {
+					if (!binding.modifiers.dirty && el.value) validator.setValue(name, el.value);
+					el.addEventListener(evt, function (ev) {
+						validator.setValue(name, ev.target && ev.target.value || ev);
+					});
+				} else {
+					vnode.componentInstance.$on(evt, function (ev) {
+						validator.setValue(name, ev.target && ev.target.value || ev);
+					});
+				}
 			}
 		});
+
+		// Get the name for the validator
+		function getValidatorName(el, binding, vnode, isNative) {
+			if (!isNative) {
+				var instance = vnode.componentInstance;
+				if (instance && instance.$props && instance.$props.name) return instance.$props.name;
+			}
+			return el.getAttribute("name");
+		}
 
 		// Set the validator
 		Object.defineProperty(vue.prototype, '$validator', {
 			get: function get() {
-				if (this.$root === this || this.$options.validate) {
+				if (this.$options.validate === true) {
 					var parentValidator = this.$parent ? this.$parent.$validator : null;
 					var validator = new Validator(parentValidator, { vue: vue });
 					Object.defineProperty(this, '$validator', {
@@ -265,7 +314,18 @@ var index = {
 						value: true
 					});
 					return validator;
+				} else if (this.$options.validate === 'inherit') {
+					var _validator = this.$parent ? this.$parent.$validator : null;
+					if (!_validator) throw new Error("Invalid parent validator to inherit");
+					Object.defineProperty(this, '$validator', {
+						value: _validator
+					});
+					Object.defineProperty(this, '$validatorOwn', {
+						value: true
+					});
+					return _validator;
 				}
+
 				return this.$parent.$validator;
 			}
 		});
