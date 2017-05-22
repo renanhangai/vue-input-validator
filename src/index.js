@@ -79,9 +79,8 @@ export default {
 						value: true,
 					});
 					return validator;
-				}
-
-				return this.$parent.$validator;
+				} 
+				return this.$parent && this.$parent.$validator;
 			}
 		});
 
