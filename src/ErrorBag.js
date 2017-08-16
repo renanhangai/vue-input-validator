@@ -50,7 +50,7 @@ export default class ErrorBag {
 		else {
 			errorView = [];
 			for ( let i = 0, len = errors.length; i<len; ++i ) {
-				errorView.push( ErrorBag.errorAsString( errors[i] ) );
+				errorView.push( ErrorBag.errorAsString( errors[i].error ) );
 			}
 			errorView.first = errorView[ 0 ];
 		}
@@ -93,7 +93,7 @@ export default class ErrorBag {
 			return error;
 		else if ( typeof(error.message) === 'string' )
 			return error.message;
-		return "Error";
+		return "";
 	}
 	
 };
