@@ -83,14 +83,14 @@ export default class Validator {
 		addEvent( cleanup, comp, evt, ( ev ) => {
 			this.setValue( name, getEventValue( ev ), true );
 		});
-		const rule = this.rules[data.name] = {
+		const ruledata = this.rules[data.name] = {
 			name:      data.name,
 			rule:      rule,
 			optional:  !!binding.modifiers.optional,
 			dirty:     !!binding.modifiers.dirty,
 		};
 		this.elementsStorage.set( el, data );
-		if ( rule.dirty ) {
+		if ( ruledata.dirty ) {
 			const status = this.status[name] = this.status[name] || {};
 			status.dirty = true;
 		}
