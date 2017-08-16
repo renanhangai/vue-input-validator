@@ -95,7 +95,7 @@ var ErrorBag = function () {
 			if (!errors || errors.length <= 0) errorView = false;else {
 				errorView = [];
 				for (var i = 0, len = errors.length; i < len; ++i) {
-					errorView.push(ErrorBag.errorAsString(errors[i]));
+					errorView.push(ErrorBag.errorAsString(errors[i].error));
 				}
 				errorView.first = errorView[0];
 			}
@@ -133,7 +133,7 @@ var ErrorBag = function () {
 		key: 'errorAsString',
 		value: function errorAsString(error) {
 			if (!error) return "";else if (typeof error === 'string') return error;else if (typeof error.message === 'string') return error.message;
-			return "Error";
+			return "";
 		}
 	}]);
 	return ErrorBag;
