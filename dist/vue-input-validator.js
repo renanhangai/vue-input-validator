@@ -192,7 +192,7 @@ var Validator = function () {
 				});
 			}
 			addEvent(cleanup, comp, evt, function (ev) {
-				_this.setValue(name, getEventValue(ev));
+				_this.setValue(name, getEventValue(ev), true);
 			});
 			this.rules[data.name] = {
 				name: data.name,
@@ -200,6 +200,10 @@ var Validator = function () {
 				autoclean: !!binding.modifiers.autoclean
 			};
 			this.elementsStorage.set(el, data);
+			if (binding.modifiers.dirty) {
+				var status = this.status[name] = this.status[name] || {};
+				status.dirty = true;
+			}
 		}
 		/**
    * Update an element
@@ -262,13 +266,16 @@ var Validator = function () {
 
 	}, {
 		key: 'setValue',
-		value: function setValue(name, value) {
+		value: function setValue(name, value, keepDirty) {
 			var _this2 = this;
 
+			var status = this.status[name] = this.status[name] || {};
+			if (!status.dirty && !value && keepDirty) return false;
+			status.dirty = true;
+
+			// No rule
 			var rule = this.rules[name];
 			if (!rule) return false;
-
-			var status = this.status[name] = this.status[name] || {};
 			this.errors.$clear(name, INPUT_TAG);
 			status.validationID = null;
 			if (status.result && typeof status.result.cancel === 'function') status.result.cancel();
@@ -282,39 +289,36 @@ var Validator = function () {
 				error = e;
 			}
 			status.result = result;
+
+			var setSuccess = function setSuccess(value) {
+				_this2.errors.$clear(name, INPUT_TAG);
+				status.value = value;
+				status.status = 'success';
+				return status.status;
+			};
+			var setError = function setError(err) {
+				err = err || true;
+				_this2.errors.$add(name, err, INPUT_TAG);
+				status.error = err;
+				status.status = 'error';
+				return status.status;
+			};
+
 			if (result && result.then) {
 				var id = {};
 				status.validationID = id;
 				status.status = result.then(function (r) {
 					if (status.validationID !== id) return null;
-					if (r === false) {
-						_this2.errors.$add(name, true, INPUT_TAG);
-						status.error = true;
-						status.status = 'error';
-					} else {
-						_this2.errors.$clear(name, INPUT_TAG);
-						status.value = value;
-						status.status = 'success';
-					}
-					return status.status;
+					return r === false ? setError() : setSuccess(value);
 				}, function (err) {
 					if (status.validationID !== id) return null;
-					_this2.errors.$add(name, err, INPUT_TAG);
-					status.error = err;
-					status.status = 'error';
-					return status.status;
+					return setError(err);
 				});
 				return status.status;
 			} else if (result === false) {
-				this.errors.$add(name, error || true, INPUT_TAG);
-				status.error = error;
-				status.status = 'error';
-				return status.status;
+				return setError(error);
 			} else {
-				this.errors.$clear(name, INPUT_TAG);
-				status.value = value;
-				status.status = 'success';
-				return status.status;
+				return setSuccess(value);
 			}
 		}
 		/**
