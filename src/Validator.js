@@ -17,7 +17,7 @@ export default class Validator {
 			this.errors = new ErrorBag( options );
 	}
 	/**
-	 * Set the validator as notDirty
+	 * Set the validator as not dirty
 	 */
 	setPristine( set ) {
 		if ( set == null ) {
@@ -29,6 +29,23 @@ export default class Validator {
 				const status = this.status[ name ];
 				if ( status )
 					status.dirty = false;
+			}
+		}
+	}
+	/**
+	 * Clear validator errors
+	 */
+	clear( set ) {
+		if ( set == null ) {
+			for ( let key in this.status ) {
+				this.status[ key ] = {};
+				this.errors.$clear( key, INPUT_TAG );
+			}
+		} else {
+			for ( let i = 0, len = set.length; i<len; ++i ) {
+				const key = set[ i ];
+				this.status[ key ] = {};
+				this.errors.$clear( key, INPUT_TAG );
 			}
 		}
 	}
@@ -66,13 +83,14 @@ export default class Validator {
 		addEvent( cleanup, comp, evt, ( ev ) => {
 			this.setValue( name, getEventValue( ev ), true );
 		});
-		this.rules[data.name] = {
+		const rule = this.rules[data.name] = {
 			name:      data.name,
 			rule:      rule,
 			optional:  !!binding.modifiers.optional,
+			dirty:     !!binding.modifiers.dirty,
 		};
 		this.elementsStorage.set( el, data );
-		if ( binding.modifiers.dirty ) {
+		if ( rule.dirty ) {
 			const status = this.status[name] = this.status[name] || {};
 			status.dirty = true;
 		}
