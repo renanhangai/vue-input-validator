@@ -49,7 +49,7 @@ export default class Validator {
 			});
 		}
 		addEvent( cleanup, comp, evt, ( ev ) => {
-			this.setValue( name, getEventValue( ev ) );
+			this.setValue( name, getEventValue( ev ), true );
 		});
 		this.rules[data.name] = {
 			name:      data.name,
@@ -57,6 +57,10 @@ export default class Validator {
 			autoclean: !!binding.modifiers.autoclean,
 		};
 		this.elementsStorage.set( el, data );
+		if ( binding.modifiers.dirty ) {
+			const status = this.status[name] = this.status[name] || {};
+			status.dirty = true;
+		}
 	}
 	/**
 	 * Update an element
@@ -110,12 +114,16 @@ export default class Validator {
 	/**
 	 * Set the value for a field
 	 */
-	setValue( name, value ) {
+	setValue( name, value, keepDirty ) {
+		const status = this.status[name] = this.status[name] || {};
+		if ( !status.dirty && !value && keepDirty )
+			return false;
+		status.dirty = true;
+		
+		// No rule
 		const rule   = this.rules[name];
 		if ( !rule )
 			return false;
-		
-		const status = this.status[name] = this.status[name] || {};
 		this.errors.$clear( name, INPUT_TAG );
 		status.validationID = null;
 		if ( status.result && typeof(status.result.cancel) === 'function' )
@@ -130,42 +138,41 @@ export default class Validator {
 			error  = e;
 		}
 		status.result = result;
+
+		const setSuccess = ( value ) => {
+			this.errors.$clear( name, INPUT_TAG );
+			status.value  = value;
+			status.status = 'success';
+			return status.status;
+		};
+		const setError = ( err ) => {
+			err = err || true;
+			this.errors.$add( name, err, INPUT_TAG );
+			status.error  = err;
+			status.status = 'error';
+			return status.status;
+		};
+
+		
 		if ( result && result.then ) {
 			let id = {};
 			status.validationID = id;
 			status.status = result.then(( r ) => {
 				if ( status.validationID !== id )
 					return null;
-				if ( r === false ) {
-					this.errors.$add( name, true, INPUT_TAG );
-					status.error  = true;
-					status.status = 'error';
-				} else {
-					this.errors.$clear( name, INPUT_TAG );
-					status.value  = value;
-					status.status = 'success';
-				}
-				return status.status;
+				return ( r === false ) ? setError() : setSuccess( value );
 			}, ( err ) => {
 				if ( status.validationID !== id )
 					return null;
-				this.errors.$add( name, err, INPUT_TAG );
-				status.error  = err;
-				status.status = 'error';
-				return status.status;
+				return setError( err );
 			});
 			return status.status;
 		} else if ( result === false ) {
-			this.errors.$add( name, error || true, INPUT_TAG );
-			status.error  = error;
-			status.status = 'error';
-			return status.status;
+			return setError( error );
 		} else {
-			this.errors.$clear( name, INPUT_TAG );
-			status.value  = value;
-			status.status = 'success';
-			return status.status;
+			return setSuccess( value );
 		}
+
 	}
 	/**
 	 * Validate the current fields
