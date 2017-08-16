@@ -240,10 +240,8 @@ var Validator = function () {
 				dirty: !!binding.modifiers.dirty
 			};
 			this.elementsStorage.set(el, data);
-			if (ruledata.dirty) {
-				var status = this.status[name] = this.status[name] || {};
-				status.dirty = true;
-			}
+			var status = this.status[name] = {};
+			if (ruledata.dirty) status.dirty = true;
 		}
 		/**
    * Update an element
@@ -309,6 +307,10 @@ var Validator = function () {
 		value: function setValue(name, value, keepDirty) {
 			var _this2 = this;
 
+			// No rule
+			var rule = this.rules[name];
+			if (!rule) return false;
+
 			var status = this.status[name] = this.status[name] || {};
 			if (!status.dirty && !value && keepDirty) return false;
 			status.dirty = true;
@@ -330,9 +332,6 @@ var Validator = function () {
 				return status.status;
 			};
 
-			// No rule
-			var rule = this.rules[name];
-			if (!rule) return false;
 			this.errors.$clear(name, INPUT_TAG);
 			status.validationID = null;
 			if (status.result && typeof status.result.cancel === 'function') status.result.cancel();
@@ -402,9 +401,10 @@ var Validator = function () {
 					var _rule = _this3.rules[_name2];
 					if (!_rule) continue;
 
-					var field = _this3.status[_name2] = _this3.status[_name2] || {};
-					if (field.status !== 'success') {
-						errors[_name2] = _this3.errors[_name2];
+					var error = _this3.errors[_name2];
+					var field = _this3.status[_name2] || {};
+					if (error || field.status !== 'success') {
+						errors[_name2] = error;
 						hasError = true;
 					} else {
 						values[_name2] = field.value;
