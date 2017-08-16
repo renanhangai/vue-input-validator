@@ -15,7 +15,22 @@ export default class Validator {
 			options.vue.util.defineReactive( this, 'errors', new ErrorBag( options ) );
 		else
 			this.errors = new ErrorBag( options );
-		
+	}
+	/**
+	 * Set the validator as notDirty
+	 */
+	setPristine( set ) {
+		if ( set == null ) {
+			for ( let key in this.status )
+				this.status[ key ].dirty = false;
+		} else {
+			for ( let i = 0, len = set.length; i<len; ++i ) {
+				const name   = set[ i ];
+				const status = this.status[ name ];
+				if ( status )
+					status.dirty = false;
+			}
+		}
 	}
 	/**
 	 * Bind a validator
@@ -54,7 +69,7 @@ export default class Validator {
 		this.rules[data.name] = {
 			name:      data.name,
 			rule:      rule,
-			autoclean: !!binding.modifiers.autoclean,
+			optional:  !!binding.modifiers.optional,
 		};
 		this.elementsStorage.set( el, data );
 		if ( binding.modifiers.dirty ) {
@@ -119,6 +134,25 @@ export default class Validator {
 		if ( !status.dirty && !value && keepDirty )
 			return false;
 		status.dirty = true;
+
+		// Functions
+		const setSuccess = ( value ) => {
+			this.errors.$clear( name, INPUT_TAG );
+			status.value  = value;
+			status.status = 'success';
+			status.result = null;
+			return status.status;
+		};
+		const setError = ( err ) => {
+			err = err || true;
+			this.errors.$add( name, err, INPUT_TAG );
+			status.error  = err;
+			status.status = 'error';
+			status.result = null;
+			return status.status;
+		};
+
+
 		
 		// No rule
 		const rule   = this.rules[name];
@@ -129,6 +163,10 @@ export default class Validator {
 		if ( status.result && typeof(status.result.cancel) === 'function' )
 			status.result.cancel();
 
+		// Optional rule
+		if ( !value && rule.optional )
+			return setSuccess( '' );
+
 		let result;
 		let error = false;
 		try {
@@ -138,20 +176,6 @@ export default class Validator {
 			error  = e;
 		}
 		status.result = result;
-
-		const setSuccess = ( value ) => {
-			this.errors.$clear( name, INPUT_TAG );
-			status.value  = value;
-			status.status = 'success';
-			return status.status;
-		};
-		const setError = ( err ) => {
-			err = err || true;
-			this.errors.$add( name, err, INPUT_TAG );
-			status.error  = err;
-			status.status = 'error';
-			return status.status;
-		};
 
 		
 		if ( result && result.then ) {
