@@ -156,11 +156,30 @@ var Validator = function () {
 		if (options.vue) options.vue.util.defineReactive(this, 'errors', new ErrorBag(options));else this.errors = new ErrorBag(options);
 	}
 	/**
-  * Bind a validator
+  * Set the validator as notDirty
   */
 
 
 	createClass(Validator, [{
+		key: 'setPristine',
+		value: function setPristine(set$$1) {
+			if (set$$1 == null) {
+				for (var key in this.status) {
+					this.status[key].dirty = false;
+				}
+			} else {
+				for (var i = 0, len = set$$1.length; i < len; ++i) {
+					var name = set$$1[i];
+					var status = this.status[name];
+					if (status) status.dirty = false;
+				}
+			}
+		}
+		/**
+   * Bind a validator
+   */
+
+	}, {
 		key: 'bindElement',
 		value: function bindElement(rule, el, binding, vnode) {
 			var _this = this;
@@ -197,7 +216,7 @@ var Validator = function () {
 			this.rules[data.name] = {
 				name: data.name,
 				rule: rule,
-				autoclean: !!binding.modifiers.autoclean
+				optional: !!binding.modifiers.optional
 			};
 			this.elementsStorage.set(el, data);
 			if (binding.modifiers.dirty) {
@@ -273,12 +292,32 @@ var Validator = function () {
 			if (!status.dirty && !value && keepDirty) return false;
 			status.dirty = true;
 
+			// Functions
+			var setSuccess = function setSuccess(value) {
+				_this2.errors.$clear(name, INPUT_TAG);
+				status.value = value;
+				status.status = 'success';
+				status.result = null;
+				return status.status;
+			};
+			var setError = function setError(err) {
+				err = err || true;
+				_this2.errors.$add(name, err, INPUT_TAG);
+				status.error = err;
+				status.status = 'error';
+				status.result = null;
+				return status.status;
+			};
+
 			// No rule
 			var rule = this.rules[name];
 			if (!rule) return false;
 			this.errors.$clear(name, INPUT_TAG);
 			status.validationID = null;
 			if (status.result && typeof status.result.cancel === 'function') status.result.cancel();
+
+			// Optional rule
+			if (!value && rule.optional) return setSuccess('');
 
 			var result = void 0;
 			var error = false;
@@ -289,20 +328,6 @@ var Validator = function () {
 				error = e;
 			}
 			status.result = result;
-
-			var setSuccess = function setSuccess(value) {
-				_this2.errors.$clear(name, INPUT_TAG);
-				status.value = value;
-				status.status = 'success';
-				return status.status;
-			};
-			var setError = function setError(err) {
-				err = err || true;
-				_this2.errors.$add(name, err, INPUT_TAG);
-				status.error = err;
-				status.status = 'error';
-				return status.status;
-			};
 
 			if (result && result.then) {
 				var id = {};
