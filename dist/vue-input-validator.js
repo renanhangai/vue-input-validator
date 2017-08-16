@@ -156,7 +156,7 @@ var Validator = function () {
 		if (options.vue) options.vue.util.defineReactive(this, 'errors', new ErrorBag(options));else this.errors = new ErrorBag(options);
 	}
 	/**
-  * Set the validator as notDirty
+  * Set the validator as not dirty
   */
 
 
@@ -172,6 +172,26 @@ var Validator = function () {
 					var name = set$$1[i];
 					var status = this.status[name];
 					if (status) status.dirty = false;
+				}
+			}
+		}
+		/**
+   * Clear validator errors
+   */
+
+	}, {
+		key: 'clear',
+		value: function clear(set$$1) {
+			if (set$$1 == null) {
+				for (var key in this.status) {
+					this.status[key] = {};
+					this.errors.$clear(key, INPUT_TAG);
+				}
+			} else {
+				for (var i = 0, len = set$$1.length; i < len; ++i) {
+					var _key = set$$1[i];
+					this.status[_key] = {};
+					this.errors.$clear(_key, INPUT_TAG);
 				}
 			}
 		}
@@ -213,13 +233,14 @@ var Validator = function () {
 			addEvent(cleanup, comp, evt, function (ev) {
 				_this.setValue(name, getEventValue(ev), true);
 			});
-			this.rules[data.name] = {
+			var ruledata = this.rules[data.name] = {
 				name: data.name,
 				rule: rule,
-				optional: !!binding.modifiers.optional
+				optional: !!binding.modifiers.optional,
+				dirty: !!binding.modifiers.dirty
 			};
 			this.elementsStorage.set(el, data);
-			if (binding.modifiers.dirty) {
+			if (ruledata.dirty) {
 				var status = this.status[name] = this.status[name] || {};
 				status.dirty = true;
 			}
