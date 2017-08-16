@@ -89,6 +89,10 @@ export default class Validator {
 			optional:  !!binding.modifiers.optional,
 			dirty:     !!binding.modifiers.dirty,
 		};
+		if ( isNative )
+			ruledata.getValue = function() { return el.value; };
+		else
+			ruledata.getValue = function() { return comp.value; };
 		this.elementsStorage.set( el, data );
 		const status = this.status[name] = {};
 		if ( ruledata.dirty )
@@ -236,8 +240,8 @@ export default class Validator {
 			const rule = this.rules[ name ];
 			if ( !rule )
 				throw new Error( `Unknown field "${name}"` );
-			const status = this.status[name] = this.status[name] || {};
-			const r      = this.setValue( name, status.value || '' );
+			const value  = rule.getValue();
+			const r      = this.setValue( name, value || '' );
 			if ( r && r.then )
 				promises.push( r );
 		}
