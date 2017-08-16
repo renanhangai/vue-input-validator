@@ -239,6 +239,11 @@ var Validator = function () {
 				optional: !!binding.modifiers.optional,
 				dirty: !!binding.modifiers.dirty
 			};
+			if (isNative) ruledata.getValue = function () {
+				return el.value;
+			};else ruledata.getValue = function () {
+				return comp.value;
+			};
 			this.elementsStorage.set(el, data);
 			var status = this.status[name] = {};
 			if (ruledata.dirty) status.dirty = true;
@@ -389,8 +394,8 @@ var Validator = function () {
 				var _name = set$$1[i];
 				var rule = this.rules[_name];
 				if (!rule) throw new Error('Unknown field "' + _name + '"');
-				var status = this.status[_name] = this.status[_name] || {};
-				var r = this.setValue(_name, status.value || '');
+				var value = rule.getValue();
+				var r = this.setValue(_name, value || '');
 				if (r && r.then) promises.push(r);
 			}
 			return p.all(promises).then(function () {
