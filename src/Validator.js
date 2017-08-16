@@ -90,10 +90,9 @@ export default class Validator {
 			dirty:     !!binding.modifiers.dirty,
 		};
 		this.elementsStorage.set( el, data );
-		if ( ruledata.dirty ) {
-			const status = this.status[name] = this.status[name] || {};
+		const status = this.status[name] = {};
+		if ( ruledata.dirty )
 			status.dirty = true;
-		}
 	}
 	/**
 	 * Update an element
@@ -148,6 +147,11 @@ export default class Validator {
 	 * Set the value for a field
 	 */
 	setValue( name, value, keepDirty ) {
+		// No rule
+		const rule   = this.rules[name];
+		if ( !rule )
+			return false;
+		
 		const status = this.status[name] = this.status[name] || {};
 		if ( !status.dirty && !value && keepDirty )
 			return false;
@@ -172,10 +176,6 @@ export default class Validator {
 
 
 		
-		// No rule
-		const rule   = this.rules[name];
-		if ( !rule )
-			return false;
 		this.errors.$clear( name, INPUT_TAG );
 		status.validationID = null;
 		if ( status.result && typeof(status.result.cancel) === 'function' )
@@ -250,10 +250,11 @@ export default class Validator {
 					const rule   = this.rules[ name ];
 					if ( !rule )
 						continue;
-					
-					const field = this.status[name] = this.status[name] || {};
-					if ( field.status !== 'success' ) {
-						errors[ name ] = this.errors[ name ];
+
+					const error = this.errors[ name ];
+					const field = this.status[name] || {};
+					if ( error || ( field.status !== 'success' ) ) {
+						errors[ name ] = error;
 						hasError       = true;
 					} else {
 						values[ name ] = field.value;
