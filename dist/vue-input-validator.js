@@ -402,7 +402,8 @@ var Validator = function () {
 				var errors = {};
 				var values = {};
 				var hasError = false;
-				for (var _name2 in _this3.rules) {
+				for (var _i = 0, _len = set$$1.length; _i < _len; ++_i) {
+					var _name2 = set$$1[_i];
 					var _rule = _this3.rules[_name2];
 					if (!_rule) continue;
 
