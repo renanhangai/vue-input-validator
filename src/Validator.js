@@ -250,8 +250,9 @@ export default class Validator {
 				const errors = {};
 				const values = {};
 				let   hasError = false;
-				for ( let name in this.rules ) {
-					const rule   = this.rules[ name ];
+				for ( let i = 0, len = set.length; i<len; ++i ) {
+					const name = set[ i ];
+					const rule = this.rules[ name ];
 					if ( !rule )
 						continue;
 
